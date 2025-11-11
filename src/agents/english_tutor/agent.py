@@ -28,18 +28,6 @@ MAX_SESSION_DURATION = 300  # 5 minutes in seconds
 # Each checkpoint defines when to notify frontend and AI (without telling user about time)
 CHECKPOINTS = [
     {
-        "time": 20,  # Initial checkpoint - session start
-        "frontend_event": True,
-        "ai_instruction": None,  # No AI instruction needed at start
-        "is_final": True
-    },
-    {
-        "time": 180,  # 3 minutes (fixed from 20)
-        "frontend_event": True,
-        "ai_instruction": "You've been conversing for 3 minutes now. Continue the engaging conversation naturally without mentioning the elapsed time to the student.",
-        "is_final": False
-    },
-    {
         "time": 270,  # 4.5 minutes (4min 30sec)
         "frontend_event": True,
         "ai_instruction": "You've been conversing for 4.5 minutes now. Start thinking about wrapping up the conversation naturally in the next 30 seconds, but don't mention time or ending to the student yet.",
@@ -48,7 +36,7 @@ CHECKPOINTS = [
     {
         "time": 300,  # 5 minutes - HARD CUTOFF
         "frontend_event": True,
-        "ai_instruction": None,  # Triggers graceful_shutdown instead
+        "ai_instruction": None,
         "is_final": True
     }
 ]

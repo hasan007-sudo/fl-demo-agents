@@ -27,18 +27,6 @@ MAX_SESSION_DURATION = 900  # 15 minutes in seconds
 # Each checkpoint defines when to notify frontend and AI (without telling user about time)
 CHECKPOINTS = [
     {
-        "time": 0,  # Initial checkpoint - session start
-        "frontend_event": True,
-        "ai_instruction": None,  # No AI instruction needed at start
-        "is_final": False
-    },
-    {
-        "time": 540,  # 9 minutes
-        "frontend_event": True,
-        "ai_instruction": "You've been conducting the interview for 9 minutes now. Continue asking relevant questions naturally without mentioning the elapsed time to the candidate.",
-        "is_final": False
-    },
-    {
         "time": 810,  # 13.5 minutes (13min 30sec)
         "frontend_event": True,
         "ai_instruction": "You've been conducting the interview for 13.5 minutes now. Start thinking about wrapping up in the next 90 seconds, but don't mention time or ending to the candidate yet.",

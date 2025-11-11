@@ -16,7 +16,8 @@
       "Bash(.venvScriptspython.exe -c \"from livekit.agents.llm import ChatMessage; print(''Import successful: ChatMessage is available'')\")",
       "WebFetch(domain:ai.google.dev)",
       "mcp__livekit-docs__docs_search",
-      "mcp__livekit-docs__get_pages"
+      "mcp__livekit-docs__get_pages",
+      "mcp__livekit-docs__get_docs_overview"
     ],
     "deny": [],
     "ask": []

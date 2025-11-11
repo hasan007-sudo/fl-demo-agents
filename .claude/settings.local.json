@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(nul)",
+      "Bash(dir:*)",
+      "Bash(python3:*)",
+      "WebSearch",
+      "Bash(python -c:*)",
+      "WebFetch(domain:docs.livekit.io)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:livekit.io)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(.venvScriptspython.exe -c \"from livekit.agents.llm import ChatMessage; print(''Import successful: ChatMessage is available'')\")",
+      "WebFetch(domain:ai.google.dev)",
+      "mcp__livekit-docs__docs_search",
+      "mcp__livekit-docs__get_pages"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

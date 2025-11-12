@@ -17,7 +17,8 @@
       "WebFetch(domain:ai.google.dev)",
       "mcp__livekit-docs__docs_search",
       "mcp__livekit-docs__get_pages",
-      "mcp__livekit-docs__get_docs_overview"
+      "mcp__livekit-docs__get_docs_overview",
+      "Bash(python -m py_compile:*)"
     ],
     "deny": [],
     "ask": []

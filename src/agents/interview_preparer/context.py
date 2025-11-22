@@ -17,10 +17,10 @@ class InterviewContext(BaseContext):
     The frontend sends this via room metadata.
     """
     # Required fields
-    candidate_name: str
-    interview_type: str  # technical, behavioral, hr, case_study
-    job_role: str  # software_engineer, product_manager, data_scientist, etc.
-    experience_level: str  # entry, mid, senior, executive
+    candidate_name:  Optional[str] = None
+    interview_type:  Optional[str] = 'behavioral'  # technical, behavioral, hr, case_study
+    job_role: Optional[str] = None  # software_engineer, product_manager, data_scientist, etc.
+    experience_level:  Optional[str] = 'mid'  # entry, mid, senior, executive
     focus_areas: List[str] = field(default_factory=list)  # Specific topics to focus on
 
     # Optional fields

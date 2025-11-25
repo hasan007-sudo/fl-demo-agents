@@ -3,7 +3,10 @@ Centralized model configuration for English Tutor agents.
 
 This module provides a single source of truth for model configurations
 per agent type. To change the model for an agent, simply modify the
-configuration in this file.
+configuration in the factory functions below.
+
+IMPORTANT: Uses lazy initialization to ensure models are created AFTER
+environment variables (like GEMINI_API_KEY) are loaded.
 """
 
 from typing import Dict, Any, Optional
@@ -14,55 +17,90 @@ from livekit.plugins.google.beta.realtime import RealtimeModel as GoogleRealtime
 # =============================================================================
 # CONVERSATION PARTNER AGENT MODEL CONFIGURATION
 # =============================================================================
-# Change these settings to switch models for the conversation partner
-CONVERSATION_MODEL_CONFIG: Dict[str, Any] = {
-    # Primary LLM for conversation
-    "llm": GoogleRealtimeModel(
-        model="gemini-2.5-flash-native-audio-preview-09-2025",
-        voice="Charon",  # Indian English voice
-        temperature=0.8,
-    ),
-    # STT - Not needed for realtime models
-    "stt": None,
-    # TTS - Not needed for realtime models
-    "tts": None,
-    # VAD for voice activity detection
-    "vad": silero.VAD.load(),
-}
 
-# Alternative: Pipeline-based configuration (separate STT/LLM/TTS)
-# Uncomment and use this if you prefer traditional pipeline approach
-# CONVERSATION_MODEL_CONFIG: Dict[str, Any] = {
-#     "llm": openai.LLM(model="gpt-4o"),
-#     "stt": deepgram.STT(model="nova-3"),
-#     "tts": cartesia.TTS(voice="indian-english-male"),
-#     "vad": silero.VAD.load(),
-# }
+def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Create model configuration for Conversation Partner Agent.
+
+    This function uses lazy initialization - models are created when called,
+    not at module import time. This ensures environment variables are loaded.
+
+    To change the model for conversation partner, edit this function.
+
+    Args:
+        voice: Optional voice override for TTS
+
+    Returns:
+        Dictionary of model configuration
+    """
+    # Primary configuration: Google Gemini Realtime
+    config = {
+        "llm": GoogleRealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice=voice or "Charon",  # Indian English voice
+            temperature=0.8,
+        ),
+        "stt": None,  # Not needed for realtime models
+        "tts": None,  # Not needed for realtime models
+        "vad": silero.VAD.load(),
+    }
+
+    return config
+
+    # Alternative: Pipeline-based configuration (separate STT/LLM/TTS)
+    # Uncomment and return this if you prefer traditional pipeline approach:
+    #
+    # return {
+    #     "llm": openai.LLM(model="gpt-4o"),
+    #     "stt": deepgram.STT(model="nova-3"),
+    #     "tts": cartesia.TTS(voice=voice or "indian-english-male"),
+    #     "vad": silero.VAD.load(),
+    # }
 
 
 # =============================================================================
 # FEEDBACK PROVIDER AGENT MODEL CONFIGURATION
 # =============================================================================
-# Change these settings to switch models for the feedback provider
-FEEDBACK_MODEL_CONFIG: Dict[str, Any] = {
-    # Can use a different/smaller model for feedback to save costs
-    "llm": GoogleRealtimeModel(
-        model="gemini-2.5-flash-native-audio-preview-09-2025",
-        voice="Charon",  # Same voice for consistency
-        temperature=0.7,  # Slightly lower for more consistent feedback
-    ),
-    "stt": None,
-    "tts": None,
-    "vad": silero.VAD.load(),
-}
 
-# Alternative: Use cheaper model for feedback
-# FEEDBACK_MODEL_CONFIG: Dict[str, Any] = {
-#     "llm": openai.LLM(model="gpt-4o-mini"),
-#     "stt": deepgram.STT(model="nova-3"),
-#     "tts": cartesia.TTS(voice="indian-english-male"),
-#     "vad": silero.VAD.load(),
-# }
+def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Create model configuration for Feedback Provider Agent.
+
+    This function uses lazy initialization - models are created when called,
+    not at module import time. This ensures environment variables are loaded.
+
+    To change the model for feedback provider, edit this function.
+    You can use a different/cheaper model here to save costs.
+
+    Args:
+        voice: Optional voice override for TTS
+
+    Returns:
+        Dictionary of model configuration
+    """
+    # Primary configuration: Google Gemini Realtime (same as conversation)
+    config = {
+        "llm": GoogleRealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice=voice or "Charon",  # Same voice for consistency
+            temperature=0.7,  # Slightly lower for more consistent feedback
+        ),
+        "stt": None,
+        "tts": None,
+        "vad": silero.VAD.load(),
+    }
+
+    return config
+
+    # Alternative: Use cheaper model for feedback to save costs
+    # Uncomment and return this if you want to use a different model:
+    #
+    # return {
+    #     "llm": openai.LLM(model="gpt-4o-mini"),  # Cheaper!
+    #     "stt": deepgram.STT(model="nova-3"),
+    #     "tts": cartesia.TTS(voice=voice or "indian-english-male"),
+    #     "vad": silero.VAD.load(),
+    # }
 
 
 def get_agent_model_config(
@@ -71,6 +109,9 @@ def get_agent_model_config(
 ) -> Dict[str, Any]:
     """
     Get model configuration for a specific agent type.
+
+    This function calls the appropriate factory function to create models
+    lazily (after environment variables are loaded).
 
     Args:
         agent_type: Type of agent ("conversation_partner" or "feedback_provider")
@@ -83,21 +124,14 @@ def get_agent_model_config(
         ValueError: If agent_type is not recognized
     """
     if agent_type == "conversation_partner":
-        config = CONVERSATION_MODEL_CONFIG.copy()
+        config = _create_conversation_model_config(voice)
     elif agent_type == "feedback_provider":
-        config = FEEDBACK_MODEL_CONFIG.copy()
+        config = _create_feedback_model_config(voice)
     else:
         raise ValueError(
             f"Unknown agent type: {agent_type}. "
             f"Expected 'conversation_partner' or 'feedback_provider'"
         )
-
-    # Apply voice override if provided and TTS exists
-    if voice and config.get("tts"):
-        # Create new TTS with specified voice
-        if isinstance(config["tts"], cartesia.TTS):
-            config["tts"] = cartesia.TTS(voice=voice)
-        # Add more TTS providers here as needed
 
     # Filter out None values
     return {k: v for k, v in config.items() if v is not None}

@@ -331,6 +331,64 @@ class EnglishTutorPromptBuilder(BasePromptBuilder):
         """Build default prompt when no context is available."""
         return self._render_template("default.md", {})
 
+    def build_for_agent(
+        self,
+        agent_type: str,
+        context: Optional[BaseContext] = None
+    ) -> str:
+        """
+        Build prompt for a specific agent type in the multi-agent system.
+
+        Args:
+            agent_type: Type of agent ("conversation_partner" or "feedback_provider")
+            context: Optional context to use for building the prompt
+
+        Returns:
+            Complete instructions for the specified agent
+
+        Raises:
+            ValueError: If agent_type is not recognized
+            FileNotFoundError: If the template for the agent doesn't exist
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Validate agent type
+        valid_types = ["conversation_partner", "feedback_provider"]
+        if agent_type not in valid_types:
+            raise ValueError(
+                f"Unknown agent type: {agent_type}. "
+                f"Expected one of: {', '.join(valid_types)}"
+            )
+
+        # Determine template name
+        template_name = f"{agent_type}.md"
+        logger.info(f"Building prompt for agent: {agent_type} using template: {template_name}")
+
+        # Convert context to dictionary
+        if context and isinstance(context, EnglishTutorContext):
+            context_dict = {
+                k: v for k, v in context.__dict__.items()
+                if k != 'agent_type' and v is not None
+            }
+            logger.debug(f"Context keys: {list(context_dict.keys())}")
+        else:
+            context_dict = {}
+            if context:
+                logger.warning(f"Context is not EnglishTutorContext, got: {type(context)}")
+
+        # Render the template
+        try:
+            instructions = self._render_template(template_name, context_dict)
+            logger.info(
+                f"Built instructions for {agent_type}. "
+                f"Length: {len(instructions)} chars"
+            )
+            return instructions
+        except FileNotFoundError as e:
+            logger.error(f"Template not found for {agent_type}: {e}")
+            raise
+
     def _extract_variables(self, context: BaseContext) -> Dict[str, Any]:
         """Extract variables from context."""
         if isinstance(context, EnglishTutorContext):

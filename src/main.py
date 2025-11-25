@@ -36,8 +36,14 @@ try:
     from .core.agents.factory import AgentFactory
     from .core.session.voice_manager import VoiceManager
     # from .core.transcripts import TranscriptHandler  # Disabled - LiveKit handles transcripts automatically
-    from .agents.english_tutor.agent import EnglishTutorAgent
+    from .agents.english_tutor.agents import (
+        ConversationPartnerAgent,
+        FeedbackProviderAgent,
+        get_agent_model_config,
+    )
     from .agents.english_tutor.context import EnglishTutorContext
+    from .agents.english_tutor.prompt_builder import EnglishTutorPromptBuilder
+    from .agents.english_tutor.shared.session_data import EnglishTutorSessionData
     from .agents.interview_preparer.agent import InterviewPreparerAgent
     from .agents.interview_preparer.context import InterviewContext
 except ImportError:
@@ -45,8 +51,14 @@ except ImportError:
     from core.agents.factory import AgentFactory
     from core.session.voice_manager import VoiceManager
     # from core.transcripts import TranscriptHandler  # Disabled - LiveKit handles transcripts automatically
-    from agents.english_tutor.agent import EnglishTutorAgent
+    from agents.english_tutor.agents import (
+        ConversationPartnerAgent,
+        FeedbackProviderAgent,
+        get_agent_model_config,
+    )
     from agents.english_tutor.context import EnglishTutorContext
+    from agents.english_tutor.prompt_builder import EnglishTutorPromptBuilder
+    from agents.english_tutor.shared.session_data import EnglishTutorSessionData
     from agents.interview_preparer.agent import InterviewPreparerAgent
     from agents.interview_preparer.context import InterviewContext
 
@@ -71,13 +83,8 @@ else:
 
 def register_agents():
     """Register all available agents."""
-    # Check if already registered to avoid errors on reconnection
-    if "english_tutor" not in registry:
-        registry.register(
-            name="english_tutor",
-            agent_class=EnglishTutorAgent,
-            is_default=True  # Default to English Tutor for backward compatibility
-        )
+    # Note: English Tutor now uses multi-agent orchestration and is not registered
+    # in the registry. It's handled directly in the entrypoint.
 
     if "interview_preparer" not in registry:
         registry.register(
@@ -97,57 +104,87 @@ def prewarm(proc: JobProcess):
     register_agents()
 
 
-async def entrypoint(ctx: JobContext):
-    """Main entrypoint with agent routing."""
-    ctx.log_context_fields = {"room": ctx.room.name}
+async def create_english_tutor_multi_agent_session(
+    ctx: JobContext,
+    context: EnglishTutorContext
+):
+    """
+    Create a multi-agent English Tutor session.
 
-    # Parse JSON metadata
-    metadata_str = ctx.job.room.metadata
-    try:
-        metadata = json.loads(metadata_str) if metadata_str else {}
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse room metadata: {e}")
-        metadata = {}
+    Sets up two specialized agents:
+    - ConversationPartnerAgent: Handles greeting, onboarding, and speaking practice (4 min)
+    - FeedbackProviderAgent: Provides feedback in Tanglish and closes session (1 min)
 
-    agent_type = metadata.get("agent_type", "english_tutor")
-    logger.info(f"Starting session with agent type: {agent_type}")
-    logger.info(f"Metadata keys: {list(metadata.keys())}")
+    Args:
+        ctx: Job context from LiveKit
+        context: English tutor context from metadata
+    """
+    logger.info("Creating multi-agent English Tutor session")
 
-    # Create context using agent-specific parser
-    if agent_type == "english_tutor":
-        context = EnglishTutorContext.from_metadata(metadata)
-    else:  # interview_preparer
-        context = InterviewContext.from_metadata(metadata)
-
-    logger.info(f"Created context: {context.agent_type}")
-
-    # Select voice based on agent type and metadata
-    selected_voice = VoiceManager.get_voice_for_agent(agent_type, context)
+    # Select voice
+    selected_voice = VoiceManager.get_voice_for_agent("english_tutor", context)
     logger.info(f"Selected voice: {selected_voice}")
 
-    # Create agent session with OpenAI Realtime model
-    # realtime_model = openai.realtime.RealtimeModel(
-    #     # model="gpt-4o-mini-realtime-preview-2024-12-17",
-    #     model="gpt-realtime-mini",
-    #     voice=selected_voice,
-    #     turn_detection=TurnDetection(
-    #         type="semantic_vad",
-    #         eagerness="low",  # Changed to "relaxed" for better patience with learners
-    #         create_response=True,
-    #         # interrupt_response=True,
-    #     ),
-    # )
+    # Build prompts for each agent
+    prompt_builder = EnglishTutorPromptBuilder()
 
-    realtime_model = GoogleRealtimeModel(
-        model="gemini-2.5-flash-native-audio-preview-09-2025",
-        voice="Charon",
-        temperature=0.8
+    conversation_instructions = prompt_builder.build_for_agent(
+        "conversation_partner",
+        context
+    )
+    logger.info(
+        f"Built conversation partner instructions "
+        f"({len(conversation_instructions)} chars)"
     )
 
-    logger.info(f"Using Google Gemini Realtime model: {realtime_model.model}")
+    feedback_instructions = prompt_builder.build_for_agent(
+        "feedback_provider",
+        context
+    )
+    logger.info(
+        f"Built feedback provider instructions "
+        f"({len(feedback_instructions)} chars)"
+    )
 
-    session = AgentSession(
-        llm=realtime_model,
+    # Get model configurations for each agent
+    conversation_config = get_agent_model_config("conversation_partner", selected_voice)
+    feedback_config = get_agent_model_config("feedback_provider", selected_voice)
+
+    logger.info(
+        f"Model configs - Conversation: {list(conversation_config.keys())}, "
+        f"Feedback: {list(feedback_config.keys())}"
+    )
+
+    # Create both agents
+    conversation_agent = ConversationPartnerAgent(
+        instructions=conversation_instructions,
+        context=context,
+        **conversation_config
+    )
+    logger.info("Created ConversationPartnerAgent")
+
+    feedback_agent = FeedbackProviderAgent(
+        instructions=feedback_instructions,
+        context=context,
+        **feedback_config
+    )
+    logger.info("Created FeedbackProviderAgent")
+
+    # Create shared session data
+    userdata = EnglishTutorSessionData(
+        student_name=context.student_name,
+        proficiency_level=context.proficiency_level,
+        comfortable_language=context.comfortable_language,
+        learning_goal=context.learning_goals[0] if context.learning_goals else None,
+        conversation_agent=conversation_agent,
+        feedback_agent=feedback_agent,
+        job_ctx=ctx
+    )
+    logger.info(f"Created session userdata: {userdata.summarize()}")
+
+    # Create session with userdata
+    session = AgentSession[EnglishTutorSessionData](
+        userdata=userdata,
         resume_false_interruption=True,
         min_interruption_duration=0.5,
         user_away_timeout=30.0
@@ -167,20 +204,10 @@ async def entrypoint(ctx: JobContext):
 
     ctx.add_shutdown_callback(log_usage)
 
-    # Create a fresh agent instance for this session
-    # This ensures each session gets its own agent with session-specific context
-    factory = AgentFactory()
-    agent = factory.create(agent_type, context=context)
-
-    if not agent:
-        logger.error(f"Failed to create agent: {agent_type}")
-        raise ValueError(f"Unable to create agent of type: {agent_type}")
-
-    logger.info(f"Created agent for session: {agent.__class__.__name__}")
-
-    # Start the session with the fresh agent instance
+    # Start session with ConversationPartnerAgent
+    logger.info("Starting session with ConversationPartnerAgent")
     await session.start(
-        agent=agent,
+        agent=conversation_agent,
         room=ctx.room,
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC(),
@@ -188,7 +215,92 @@ async def entrypoint(ctx: JobContext):
     )
 
     await ctx.connect()
-    logger.info(f"{agent_type} agent session started successfully")
+    logger.info("Multi-agent English Tutor session started successfully")
+
+
+async def entrypoint(ctx: JobContext):
+    """Main entrypoint with agent routing."""
+    ctx.log_context_fields = {"room": ctx.room.name}
+
+    # Parse JSON metadata
+    metadata_str = ctx.job.room.metadata
+    try:
+        metadata = json.loads(metadata_str) if metadata_str else {}
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse room metadata: {e}")
+        metadata = {}
+
+    agent_type = metadata.get("agent_type", "english_tutor")
+    logger.info(f"Starting session with agent type: {agent_type}")
+    logger.info(f"Metadata keys: {list(metadata.keys())}")
+
+    # Route to appropriate agent setup
+    if agent_type == "english_tutor":
+        # Multi-agent orchestration for English Tutor
+        context = EnglishTutorContext.from_metadata(metadata)
+        logger.info(f"Created English Tutor context: {context.agent_type}")
+        await create_english_tutor_multi_agent_session(ctx, context)
+
+    else:
+        # Single-agent for Interview Preparer
+        context = InterviewContext.from_metadata(metadata)
+        logger.info(f"Created context: {context.agent_type}")
+
+        # Select voice
+        selected_voice = VoiceManager.get_voice_for_agent(agent_type, context)
+        logger.info(f"Selected voice: {selected_voice}")
+
+        # Create realtime model
+        realtime_model = GoogleRealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice="Charon",
+            temperature=0.8
+        )
+        logger.info(f"Using Google Gemini Realtime model: {realtime_model.model}")
+
+        # Create session
+        session = AgentSession(
+            llm=realtime_model,
+            resume_false_interruption=True,
+            min_interruption_duration=0.5,
+            user_away_timeout=30.0
+        )
+
+        # Setup metrics
+        usage_collector = metrics.UsageCollector()
+
+        @session.on("metrics_collected")
+        def _on_metrics_collected(ev: MetricsCollectedEvent):
+            metrics.log_metrics(ev.metrics)
+            usage_collector.collect(ev.metrics)
+
+        async def log_usage():
+            summary = usage_collector.get_summary()
+            logger.info(f"Usage: {summary}")
+
+        ctx.add_shutdown_callback(log_usage)
+
+        # Create agent
+        factory = AgentFactory()
+        agent = factory.create(agent_type, context=context)
+
+        if not agent:
+            logger.error(f"Failed to create agent: {agent_type}")
+            raise ValueError(f"Unable to create agent of type: {agent_type}")
+
+        logger.info(f"Created agent for session: {agent.__class__.__name__}")
+
+        # Start session
+        await session.start(
+            agent=agent,
+            room=ctx.room,
+            room_input_options=RoomInputOptions(
+                noise_cancellation=noise_cancellation.BVC(),
+            ),
+        )
+
+        await ctx.connect()
+        logger.info(f"{agent_type} agent session started successfully")
 
 
 if __name__ == "__main__":

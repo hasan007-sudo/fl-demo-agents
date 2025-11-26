@@ -38,7 +38,7 @@ class EnglishTutorContext(BaseContext):
     # =============================================================================
     # Conversation tracking
     topics_discussed: List[str] = field(default_factory=list)
-    conversation_start_time: Optional[float] = None
+    # conversation_start_time: Optional[float] = None
 
     # Speaking metrics (for future analytics - not used by agents)
     total_words_spoken: int = 0

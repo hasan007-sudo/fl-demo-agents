@@ -267,7 +267,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 
-    async def _on_session_timeout(self) -> None:
+    async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """
         Handle final checkpoint that triggers agent handoff.
         
@@ -278,24 +278,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
         logger.warning(f"{agent_name}: Final checkpoint reached - triggering handoff")
         
         try:
-            # Generate a system message to trigger the appropriate function tool
-            if "Conversation" in agent_name:
-                # Trigger transfer to feedback agent
-                instruction = (
-                    "Time is up for the conversation phase. "
-                    "Call transfer_to_feedback() now to hand off to the Feedback Provider."
-                )
-            elif "Feedback" in agent_name:
-                # Trigger session finalization
-                instruction = (
-                    "Time is up for the feedback phase. "
-                    "Call finalize_session() now to end the session gracefully."
-                )
-            else:
-                logger.error(f"Unknown agent type: {agent_name}")
-                return
-            
-            self.session.generate_reply(user_input=instruction)
+            await self.session.generate_reply(user_input=checkpoint.ai_instruction)
             logger.info(f"{agent_name}: Handoff instruction sent")
             
         except Exception as e:

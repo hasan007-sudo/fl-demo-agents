@@ -59,7 +59,7 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 
-    async def _on_session_timeout(self) -> None:
+    async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """Handle session timeout by triggering graceful shutdown."""
         await self._graceful_shutdown()
 

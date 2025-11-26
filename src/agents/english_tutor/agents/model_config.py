@@ -99,7 +99,7 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
         # for local
         "llm": openai.LLM(model="gpt-4o-mini"),
         "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
-        "tts": cartesia.TTS(voice=voice or "indian-english-male"),
+        "tts": cartesia.TTS(model="sonic-2"),
         "vad": silero.VAD.load(),
     }
 

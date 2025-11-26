@@ -1,5 +1,6 @@
 """Feedback Provider Agent for English Tutor."""
 
+from core.agents.mixins.shutdown import ShutdownMixin
 import logging
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
@@ -13,7 +14,7 @@ from ..config import FEEDBACK_TIMING_CONFIG
 logger = logging.getLogger(__name__)
 
 
-class FeedbackProviderAgent(BaseTutorAgent):
+class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
     """
     Feedback Provider for English learning sessions.
 
@@ -67,11 +68,19 @@ class FeedbackProviderAgent(BaseTutorAgent):
             user_input=feedback_context
         )
 
+    def get_goodbye_instruction(self) -> str:
+        """Get goodbye instruction from config."""
+        return "Say goodbye professionally in English"
+
+    def get_session_duration(self) -> int:
+        """Get session duration from timing config."""
+        return self.get_timing_config().max_duration
+
     @function_tool()
     async def finalize_session(
         self,
         context: RunContext[EnglishTutorContext]
-    ) -> str:
+    ):
         """
         Finalize the session after providing feedback.
 
@@ -85,5 +94,4 @@ class FeedbackProviderAgent(BaseTutorAgent):
 
         # The session will end naturally after this
         # No need to explicitly trigger anything - LiveKit handles it
-
-        return "Session finalized successfully"
+        self._graceful_shutdown()

@@ -91,7 +91,7 @@ class TimingMixin(ABC):
                 metadata=metadata
             )
 
-        await self._on_session_timeout()
+        await self._on_session_timeout(final_cp, idx)
 
     @abstractmethod
     async def _on_checkpoint_reached(self, checkpoint: Checkpoint, idx: int) -> None:
@@ -99,6 +99,6 @@ class TimingMixin(ABC):
         pass
 
     @abstractmethod
-    async def _on_session_timeout(self) -> None:
+    async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """Called when the session reaches its time limit."""
         pass

@@ -4,8 +4,11 @@ import logging
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
 
+from core.agents.base import AgentMetadata
+from core.session.checkpoints import SessionTimingConfig
 from .base_tutor_agent import BaseTutorAgent
-from ..shared.session_data import EnglishTutorSessionData
+from ..context import EnglishTutorContext
+from ..config import FEEDBACK_TIMING_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,21 @@ class FeedbackProviderAgent(BaseTutorAgent):
     history and ends the session with a polished closing statement.
     """
 
+    @property
+    def metadata(self) -> AgentMetadata:
+        """Get metadata about this agent."""
+        return AgentMetadata(
+            name="FeedbackProvider",
+            version="1.0.0",
+            description="Provides constructive feedback in Tanglish and professional closure",
+            supported_languages=["en", "ta"],
+            capabilities=["feedback", "session_finalization", "bilingual_communication"]
+        )
+
+    def get_timing_config(self) -> SessionTimingConfig:
+        """Get timing configuration for feedback phase."""
+        return FEEDBACK_TIMING_CONFIG
+
     async def _on_enter_hook(self) -> None:
         """
         Start the feedback phase.
@@ -31,7 +49,7 @@ class FeedbackProviderAgent(BaseTutorAgent):
         """
         logger.info("FeedbackProviderAgent: Starting feedback phase")
 
-        userdata: EnglishTutorSessionData = self.session.userdata
+        userdata: EnglishTutorContext = self.session.userdata
 
         # Build context about the session for the AI
         topics_str = ", ".join(userdata.topics_discussed) if userdata.topics_discussed else "various topics"
@@ -52,7 +70,7 @@ class FeedbackProviderAgent(BaseTutorAgent):
     @function_tool()
     async def finalize_session(
         self,
-        context: RunContext[EnglishTutorSessionData]
+        context: RunContext[EnglishTutorContext]
     ) -> str:
         """
         Finalize the session after providing feedback.

@@ -15,7 +15,6 @@ from .agents import (
 )
 from .context import EnglishTutorContext
 from .prompt_builder import EnglishTutorPromptBuilder
-from .shared.session_data import EnglishTutorSessionData
 
 __all__ = [
     "ConversationPartnerAgent",
@@ -23,5 +22,4 @@ __all__ = [
     "get_agent_model_config",
     "EnglishTutorContext",
     "EnglishTutorPromptBuilder",
-    "EnglishTutorSessionData",
 ]

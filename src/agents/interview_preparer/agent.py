@@ -55,7 +55,7 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
         if checkpoint.ai_instruction:
             try:
                 logger.info(f"Interview checkpoint {idx + 1}: Sending AI instruction")
-                self.session.generate_reply(user_input=checkpoint.ai_instruction)
+                self.session.generate_reply(instructions=checkpoint.ai_instruction)
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 
@@ -77,7 +77,7 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
 
         try:
             self.session.generate_reply(
-                user_input="Start by greeting the candidate warmly by name if provided"
+                instructions="Start by greeting the candidate warmly by name if provided"
             )
 
             logger.info(

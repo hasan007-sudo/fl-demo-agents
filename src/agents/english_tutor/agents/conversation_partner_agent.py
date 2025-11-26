@@ -1,12 +1,15 @@
 """Conversation Partner Agent for English Tutor."""
 
+from livekit.agents.voice.agent import Agent
 import logging
-from livekit.agents import Agent
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
 
+from core.agents.base import AgentMetadata
+from core.session.checkpoints import SessionTimingConfig
 from .base_tutor_agent import BaseTutorAgent
-from ..shared.session_data import EnglishTutorSessionData
+from ..context import EnglishTutorContext
+from ..config import CONVERSATION_TIMING_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,21 @@ class ConversationPartnerAgent(BaseTutorAgent):
     After ~4 minutes, it transfers to the FeedbackProviderAgent.
     """
 
+    @property
+    def metadata(self) -> AgentMetadata:
+        """Get metadata about this agent."""
+        return AgentMetadata(
+            name="ConversationPartner",
+            version="1.0.0",
+            description="Friendly conversation partner for English speaking practice",
+            supported_languages=["en"],
+            capabilities=["conversation", "topic_tracking", "agent_handoff"]
+        )
+
+    def get_timing_config(self) -> SessionTimingConfig:
+        """Get timing configuration for conversation phase."""
+        return CONVERSATION_TIMING_CONFIG
+
     async def _on_enter_hook(self) -> None:
         """
         Start the conversation phase.
@@ -33,7 +51,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
         """
         logger.info("ConversationPartnerAgent: Starting conversation phase")
 
-        userdata: EnglishTutorSessionData = self.session.userdata
+        userdata: EnglishTutorContext = self.session.userdata
 
         # Log student info
         if userdata.student_name:
@@ -47,7 +65,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
     @function_tool()
     async def record_topic_discussed(
         self,
-        context: RunContext[EnglishTutorSessionData],
+        context: RunContext[EnglishTutorContext],
         topic: str
     ) -> str:
         """
@@ -70,7 +88,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
     @function_tool()
     async def transfer_to_feedback(
         self,
-        context: RunContext[EnglishTutorSessionData]
+        context: RunContext[EnglishTutorContext]
     ) -> Agent:
         """
         Transfer control to the Feedback Provider agent.

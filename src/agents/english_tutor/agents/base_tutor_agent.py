@@ -1,18 +1,21 @@
 """Base class for English Tutor multi-agent system."""
 
+from livekit.agents.voice.agent import Agent
 import logging
 from abc import abstractmethod
 from typing import Optional
-from livekit.agents import Agent
+from livekit.agents import AgentSession
 from livekit.agents.llm import ChatContext
-
+from core.agents.base import BaseAgent, AgentMetadata
+from core.agents.mixins.timing import TimingMixin
+from core.session.checkpoints import SessionTimingConfig, Checkpoint
+from core.prompts.base import BasePromptBuilder
 from ..context import EnglishTutorContext
-from ..shared.session_data import EnglishTutorSessionData
 
 logger = logging.getLogger(__name__)
 
 
-class BaseTutorAgent(Agent):
+class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
     """
     Base class for English Tutor agents with shared handoff functionality.
 
@@ -37,13 +40,46 @@ class BaseTutorAgent(Agent):
             chat_ctx: Existing chat context to preserve history
             **kwargs: Additional arguments for Agent (llm, stt, tts, vad)
         """
+        # Store instructions before calling super()
+        self._external_instructions = instructions
+        
+        # Initialize BaseAgent (which will call _build_instructions)
         super().__init__(
-            instructions=instructions,
+            context=context,
+            prompt_builder=None,  # We use external instructions
             chat_ctx=chat_ctx,
             **kwargs
         )
-        self.context = context
         logger.info(f"{self.__class__.__name__} initialized")
+
+    @property
+    @abstractmethod
+    def metadata(self) -> AgentMetadata:
+        """Get metadata about this agent type."""
+        pass
+
+    def _create_default_prompt_builder(self) -> BasePromptBuilder:
+        """Not used - we receive instructions externally."""
+        return None  # type: ignore
+
+    def _get_default_instructions(self) -> str:
+        """Return the externally provided instructions."""
+        return self._external_instructions
+
+    async def _on_session_ended_hook(self, session: AgentSession) -> None:
+        """Hook for session end logic."""
+        logger.info(f"{self.__class__.__name__}: Session ended")
+        # Subclasses can override if needed
+
+    async def _validate_context_hook(self, context: EnglishTutorContext) -> bool:
+        """Validate the English tutor context."""
+        # Basic validation - context should exist
+        return context is not None
+
+    @abstractmethod
+    def get_timing_config(self) -> SessionTimingConfig:
+        """Get the timing configuration for this agent."""
+        pass
 
     async def on_enter(self) -> None:
         """
@@ -57,10 +93,10 @@ class BaseTutorAgent(Agent):
 
         try:
             # Get session userdata
-            userdata: EnglishTutorSessionData = self.session.userdata
+            userdata: EnglishTutorContext = self.session.userdata
 
             # Update room attributes for tracking
-            if userdata.job_ctx and userdata.job_ctx.room:
+            if userdata.job_ctx and userdata.job_ctx.room and userdata.job_ctx.room.isconnected():
                 await userdata.job_ctx.room.local_participant.set_attributes({
                     "agent": agent_name
                 })
@@ -104,6 +140,10 @@ class BaseTutorAgent(Agent):
             # Call agent-specific entry hook
             await self._on_enter_hook()
 
+            # Initialize timing after agent-specific setup
+            self._init_timing()
+            logger.info(f"{agent_name}: Timing initialized")
+
         except Exception as e:
             logger.error(f"Error in {agent_name}.on_enter: {e}", exc_info=True)
             raise
@@ -145,21 +185,28 @@ class BaseTutorAgent(Agent):
         filtered_items = []
         for item in items:
             # Always keep system messages
-            if item.role == "system":
+            if hasattr(item, 'role') and item.role == "system":
                 filtered_items.append(item)
                 continue
 
-            # Keep function calls if specified
-            if keep_function_call and hasattr(item, "tool_calls") and item.tool_calls:
-                filtered_items.append(item)
-                continue
+            # Keep function/tool calls if specified
+            if keep_function_call:
+                # Check for tool_calls attribute (newer API)
+                if hasattr(item, "tool_calls") and item.tool_calls:
+                    filtered_items.append(item)
+                    continue
+                # Check for function_calls attribute (older API)
+                if hasattr(item, "function_calls") and item.function_calls:
+                    filtered_items.append(item)
+                    continue
 
-            # Keep regular messages
-            filtered_items.append(item)
+            # Keep regular messages (must have role attribute)
+            if hasattr(item, 'role'):
+                filtered_items.append(item)
 
         # Keep only last N messages (excluding system)
-        system_items = [item for item in filtered_items if item.role == "system"]
-        other_items = [item for item in filtered_items if item.role != "system"]
+        system_items = [item for item in filtered_items if hasattr(item, 'role') and item.role == "system"]
+        other_items = [item for item in filtered_items if not hasattr(item, 'role') or item.role != "system"]
 
         # Truncate non-system items
         truncated_other = other_items[-keep_last_n_messages:] if other_items else []
@@ -190,7 +237,7 @@ class BaseTutorAgent(Agent):
         Raises:
             ValueError: If agent_name is not recognized
         """
-        userdata: EnglishTutorSessionData = self.session.userdata
+        userdata: EnglishTutorContext = self.session.userdata
         userdata.previous_agent = self
 
         logger.info(f"Transferring from {self.__class__.__name__} to {agent_name}")
@@ -204,3 +251,52 @@ class BaseTutorAgent(Agent):
                 f"Unknown agent: {agent_name}. "
                 f"Expected 'conversation' or 'feedback'"
             )
+
+    async def _on_checkpoint_reached(self, checkpoint: Checkpoint, idx: int) -> None:
+        """
+        Handle regular checkpoint by sending AI instruction.
+        
+        This is called for non-final checkpoints to give the agent
+        guidance about timing (e.g., "wrap up soon").
+        """
+        if checkpoint.ai_instruction:
+            try:
+                agent_name = self.__class__.__name__
+                logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - sending AI instruction")
+                self.session.generate_reply(user_input=checkpoint.ai_instruction)
+            except Exception as e:
+                logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
+
+    async def _on_session_timeout(self) -> None:
+        """
+        Handle final checkpoint that triggers agent handoff.
+        
+        For ConversationPartner: triggers transfer_to_feedback()
+        For FeedbackProvider: triggers finalize_session()
+        """
+        agent_name = self.__class__.__name__
+        logger.warning(f"{agent_name}: Final checkpoint reached - triggering handoff")
+        
+        try:
+            # Generate a system message to trigger the appropriate function tool
+            if "Conversation" in agent_name:
+                # Trigger transfer to feedback agent
+                instruction = (
+                    "Time is up for the conversation phase. "
+                    "Call transfer_to_feedback() now to hand off to the Feedback Provider."
+                )
+            elif "Feedback" in agent_name:
+                # Trigger session finalization
+                instruction = (
+                    "Time is up for the feedback phase. "
+                    "Call finalize_session() now to end the session gracefully."
+                )
+            else:
+                logger.error(f"Unknown agent type: {agent_name}")
+                return
+            
+            self.session.generate_reply(user_input=instruction)
+            logger.info(f"{agent_name}: Handoff instruction sent")
+            
+        except Exception as e:
+            logger.error(f"{agent_name}: Failed to trigger handoff: {e}", exc_info=True)

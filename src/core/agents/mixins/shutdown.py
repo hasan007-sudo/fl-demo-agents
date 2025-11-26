@@ -58,7 +58,7 @@ class ShutdownMixin(ABC):
 
                 logger.info("Generating goodbye message")
                 speech_handle = self.session.generate_reply(
-                    user_input=goodbye_instruction,
+                    instructions=goodbye_instruction,
                     allow_interruptions=False
                 )
 

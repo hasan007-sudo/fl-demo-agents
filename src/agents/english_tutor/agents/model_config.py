@@ -9,6 +9,10 @@ IMPORTANT: Uses lazy initialization to ensure models are created AFTER
 environment variables (like GEMINI_API_KEY) are loaded.
 """
 
+from livekit.agents import (
+    inference
+)
+from livekit.agents.types import APIConnectOptions
 from typing import Dict, Any, Optional
 from livekit.plugins import openai, deepgram, cartesia, silero
 from livekit.plugins.google.beta.realtime import RealtimeModel as GoogleRealtimeModel
@@ -35,13 +39,17 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
     """
     # Primary configuration: Google Gemini Realtime
     config = {
-        "llm": GoogleRealtimeModel(
-            model="gemini-2.5-flash-native-audio-preview-09-2025",
-            voice=voice or "Charon",  # Indian English voice
-            temperature=0.8,
-        ),
-        "stt": None,  # Not needed for realtime models
-        "tts": None,  # Not needed for realtime models
+        # "llm": GoogleRealtimeModel(
+        #     model="gemini-2.5-flash-native-audio-preview-09-2025",
+        #     voice=voice or "Charon",  # Indian English voice
+        #     temperature=0.8,
+        #     conn_options=APIConnectOptions(
+        #         timeout=60
+        #     )
+        # ),
+        "llm": openai.LLM(model="gpt-4o-mini"),
+        "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
+        "tts": cartesia.TTS(model="sonic-2"),
         "vad": silero.VAD.load(),
     }
 
@@ -80,13 +88,18 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
     """
     # Primary configuration: Google Gemini Realtime (same as conversation)
     config = {
-        "llm": GoogleRealtimeModel(
-            model="gemini-2.5-flash-native-audio-preview-09-2025",
-            voice=voice or "Charon",  # Same voice for consistency
-            temperature=0.7,  # Slightly lower for more consistent feedback
-        ),
-        "stt": None,
-        "tts": None,
+        # "llm": GoogleRealtimeModel(
+        #     model="gemini-2.5-flash-native-audio-preview-09-2025",
+        #     voice=voice or "Charon",  # Same voice for consistency
+        #     temperature=0.7,  # Slightly lower for more consistent feedback
+        #     conn_options=APIConnectOptions(
+        #         timeout=60
+        #     )
+        # ),
+        # for local
+        "llm": openai.LLM(model="gpt-4o-mini"),
+        "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
+        "tts": cartesia.TTS(voice=voice or "indian-english-male"),
         "vad": silero.VAD.load(),
     }
 

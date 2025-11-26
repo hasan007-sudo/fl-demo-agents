@@ -43,7 +43,7 @@ try:
     )
     from .agents.english_tutor.context import EnglishTutorContext
     from .agents.english_tutor.prompt_builder import EnglishTutorPromptBuilder
-    from .agents.english_tutor.shared.session_data import EnglishTutorSessionData
+    from .agents.english_tutor.context import EnglishTutorContext
     from .agents.interview_preparer.agent import InterviewPreparerAgent
     from .agents.interview_preparer.context import InterviewContext
 except ImportError:
@@ -58,7 +58,7 @@ except ImportError:
     )
     from agents.english_tutor.context import EnglishTutorContext
     from agents.english_tutor.prompt_builder import EnglishTutorPromptBuilder
-    from agents.english_tutor.shared.session_data import EnglishTutorSessionData
+    from agents.english_tutor.context import EnglishTutorContext
     from agents.interview_preparer.agent import InterviewPreparerAgent
     from agents.interview_preparer.context import InterviewContext
 
@@ -122,7 +122,7 @@ async def create_english_tutor_multi_agent_session(
     logger.info("Creating multi-agent English Tutor session")
 
     # Select voice
-    selected_voice = VoiceManager.get_voice_for_agent("english_tutor", context)
+    selected_voice = VoiceManager.get_voice_for_agent("english_tutor", context, provider="google")
     logger.info(f"Selected voice: {selected_voice}")
 
     # Build prompts for each agent
@@ -170,21 +170,16 @@ async def create_english_tutor_multi_agent_session(
     )
     logger.info("Created FeedbackProviderAgent")
 
-    # Create shared session data
-    userdata = EnglishTutorSessionData(
-        student_name=context.student_name,
-        proficiency_level=context.proficiency_level,
-        comfortable_language=context.comfortable_language,
-        learning_goal=context.learning_goals[0] if context.learning_goals else None,
-        conversation_agent=conversation_agent,
-        feedback_agent=feedback_agent,
-        job_ctx=ctx
-    )
-    logger.info(f"Created session userdata: {userdata.summarize()}")
+    # Store agent references in context for handoff
+    context.conversation_agent = conversation_agent
+    context.feedback_agent = feedback_agent
+    context.job_ctx = ctx
+    
+    logger.info(f"Session context initialized: {context.summarize()}")
 
-    # Create session with userdata
-    session = AgentSession[EnglishTutorSessionData](
-        userdata=userdata,
+    # Create session with context as userdata
+    session = AgentSession[EnglishTutorContext](
+        userdata=context,
         resume_false_interruption=True,
         min_interruption_duration=0.5,
         user_away_timeout=30.0
@@ -247,13 +242,13 @@ async def entrypoint(ctx: JobContext):
         logger.info(f"Created context: {context.agent_type}")
 
         # Select voice
-        selected_voice = VoiceManager.get_voice_for_agent(agent_type, context)
+        selected_voice = VoiceManager.get_voice_for_agent(agent_type, context, provider="google")
         logger.info(f"Selected voice: {selected_voice}")
 
         # Create realtime model
         realtime_model = GoogleRealtimeModel(
             model="gemini-2.5-flash-native-audio-preview-09-2025",
-            voice="Charon",
+            voice=selected_voice,
             temperature=0.8
         )
         logger.info(f"Using Google Gemini Realtime model: {realtime_model.model}")

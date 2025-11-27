@@ -12,6 +12,7 @@ environment variables (like GEMINI_API_KEY) are loaded.
 from livekit.agents import (
     inference
 )
+from livekit.plugins import inworld
 from livekit.agents.types import APIConnectOptions
 from typing import Dict, Any, Optional
 from livekit.plugins import openai, deepgram, cartesia, silero
@@ -39,32 +40,22 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
     """
     # Primary configuration: Google Gemini Realtime
     config = {
-        # "llm": GoogleRealtimeModel(
-        #     model="gemini-2.5-flash-native-audio-preview-09-2025",
-        #     voice=voice or "Charon",  # Indian English voice
-        #     temperature=0.8,
-        #     conn_options=APIConnectOptions(
-        #         timeout=60
-        #     )
-        # ),
-        "llm": openai.LLM(model="gpt-4o-mini"),
-        "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
-        "tts": cartesia.TTS(model="sonic-2"),
-        "vad": silero.VAD.load(),
+        "llm": GoogleRealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice=voice or "Charon",  # Indian English voice
+            temperature=0.8,
+            conn_options=APIConnectOptions(
+                timeout=60
+            )
+        ),
+        # # for local
+        # "llm": openai.LLM(model="gpt-4o-mini"),
+        # "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
+        # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
+        # "vad": silero.VAD.load(),
     }
 
     return config
-
-    # Alternative: Pipeline-based configuration (separate STT/LLM/TTS)
-    # Uncomment and return this if you prefer traditional pipeline approach:
-    #
-    # return {
-    #     "llm": openai.LLM(model="gpt-4o"),
-    #     "stt": deepgram.STT(model="nova-3"),
-    #     "tts": cartesia.TTS(voice=voice or "indian-english-male"),
-    #     "vad": silero.VAD.load(),
-    # }
-
 
 # =============================================================================
 # FEEDBACK PROVIDER AGENT MODEL CONFIGURATION
@@ -88,33 +79,22 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
     """
     # Primary configuration: Google Gemini Realtime (same as conversation)
     config = {
-        # "llm": GoogleRealtimeModel(
-        #     model="gemini-2.5-flash-native-audio-preview-09-2025",
-        #     voice=voice or "Charon",  # Same voice for consistency
-        #     temperature=0.7,  # Slightly lower for more consistent feedback
-        #     conn_options=APIConnectOptions(
-        #         timeout=60
-        #     )
-        # ),
-        # for local
-        "llm": openai.LLM(model="gpt-4o-mini"),
-        "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
-        "tts": cartesia.TTS(model="sonic-2"),
-        "vad": silero.VAD.load(),
+        "llm": GoogleRealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice=voice or "Charon",  # Same voice for consistency
+            temperature=0.7,  # Slightly lower for more consistent feedback
+            conn_options=APIConnectOptions(
+                timeout=60
+            )
+        ),
+        # # for local
+        # "llm": openai.LLM(model="gpt-4o-mini"),
+        # "stt": inference.STT(language="en"),
+        # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
+        # "vad": silero.VAD.load(),
     }
 
     return config
-
-    # Alternative: Use cheaper model for feedback to save costs
-    # Uncomment and return this if you want to use a different model:
-    #
-    # return {
-    #     "llm": openai.LLM(model="gpt-4o-mini"),  # Cheaper!
-    #     "stt": deepgram.STT(model="nova-3"),
-    #     "tts": cartesia.TTS(voice=voice or "indian-english-male"),
-    #     "vad": silero.VAD.load(),
-    # }
-
 
 def get_agent_model_config(
     agent_type: str,

@@ -264,7 +264,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
             try:
                 agent_name = self.__class__.__name__
                 logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - sending AI instruction")
-                await self.session.generate_reply(user_input=checkpoint.ai_instruction)
+                await self.session.generate_reply(instructions=checkpoint.ai_instruction)
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 

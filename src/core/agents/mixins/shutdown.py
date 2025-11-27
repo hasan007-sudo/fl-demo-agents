@@ -57,15 +57,15 @@ class ShutdownMixin(ABC):
                 goodbye_instruction = self.get_goodbye_instruction()
 
                 logger.info("Generating goodbye message")
-                speech_handle = self.session.generate_reply(
+                await self.session.generate_reply(
                     instructions=goodbye_instruction,
                     allow_interruptions=False
                 )
 
-                await self._lifecycle.wait_for_speech_playout(
-                    speech_handle,
-                    timeout=30
-                )
+                # await self._lifecycle.wait_for_speech_playout(
+                #     speech_handle,
+                #     timeout=30
+                # )
 
             self._lifecycle.mark_ended()
             logger.info("Session marked as ended")

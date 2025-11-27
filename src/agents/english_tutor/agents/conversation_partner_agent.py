@@ -58,7 +58,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
             logger.info(f"Starting conversation with student: {userdata.student_name}")
 
         # Generate initial greeting
-        self.session.generate_reply(
+        await self.session.generate_reply(
             user_input="Greet the student warmly and begin the onboarding process."
         )
 

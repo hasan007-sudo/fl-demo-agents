@@ -14,7 +14,7 @@ name = "agent-starter-python"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
-    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "openai", "silero", "turn-detector"] },
+    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "inworld", "openai", "silero", "turn-detector"] },
     { name = "livekit-plugins-noise-cancellation" },
     { name = "python-dotenv" },
 ]
@@ -28,7 +28,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "openai", "silero", "turn-detector"], specifier = "~=1.2" },
+    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "inworld", "openai", "silero", "turn-detector"], specifier = "~=1.2" },
     { name = "livekit-plugins-noise-cancellation", specifier = "~=0.2" },
     { name = "python-dotenv" },
 ]
@@ -1379,6 +1379,9 @@ images = [
     { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
+inworld = [
+    { name = "livekit-plugins-inworld" },
+]
 openai = [
     { name = "livekit-plugins-openai" },
 ]
@@ -1479,6 +1482,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/36/76/3fc48eb9a328ff75d2ac2a27f00afe13d1c11f45e57eb8d9e7acdf08fbdf/livekit_plugins_google-1.2.14.tar.gz", hash = "sha256:257a9a1cfa5e58d1bcdd5b049bcdd1ef4ca5c3d496be87e36ecc4849b6eff4a8", size = 31063, upload-time = "2025-10-01T17:55:29.969Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/2a/47a9ce5c0392f7c5e006b628dd2c4fa3c4630c373d3749e3b6b903651d53/livekit_plugins_google-1.2.14-py3-none-any.whl", hash = "sha256:14e25d9320c1d3ad248dcfae1748091a1278ca190fde3e5ef513110249f8dd8a", size = 38271, upload-time = "2025-10-01T17:55:29.159Z" },
+]
+
+[[package]]
+name = "livekit-plugins-inworld"
+version = "1.2.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/b6/2b9f0786616a637ad41b08cd2791d782aef9e32571df0e31515b87734560/livekit_plugins_inworld-1.2.14.tar.gz", hash = "sha256:52ec2d05663c1e9da03003fb75d6fca15d78d60b67b289b944344d8162caf2cb", size = 5976, upload-time = "2025-10-01T17:55:35.532Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e1/c4/dfee5e70270cc24b08a49b08ed8e4a98a7063529638f6859506c3979ed94/livekit_plugins_inworld-1.2.14-py3-none-any.whl", hash = "sha256:b8e9e0be6ca5f3821abddb9dc0ee0ac777917fe9644229864a2ebcf508c6be91", size = 6471, upload-time = "2025-10-01T17:55:34.68Z" },
 ]
 
 [[package]]

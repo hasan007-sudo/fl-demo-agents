@@ -13,7 +13,7 @@ MAX_SESSION_DURATION = 300  # 5 minutes total
 CONVERSATION_PARTNER_DURATION = 240  # 4 minutes
 
 # Feedback Provider duration (1 minute)
-FEEDBACK_PROVIDER_DURATION = 60  # 1 minute
+FEEDBACK_PROVIDER_DURATION = 30  # 1 minute
 
 
 # =============================================================================
@@ -53,25 +53,7 @@ CONVERSATION_TIMING_CONFIG = SessionTimingConfig(
 
 FEEDBACK_TIMING_CONFIG = SessionTimingConfig(
     max_duration=FEEDBACK_PROVIDER_DURATION,
-    checkpoints=[
-        Checkpoint(
-            time=50,  # 50 seconds - wrap up warning
-            frontend_event=True,
-            ai_instruction=(
-                "You have 10 seconds remaining. "
-                "Begin your English closing statement now if you haven't already."
-            ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=60,  # 1 minute - end session
-            frontend_event=True,
-            ai_instruction=(
-                "Session ending now. Call finalize_session() immediately."
-            ),
-            is_final=True
-        ),
-    ]
+    checkpoints=[]
 )
 
 

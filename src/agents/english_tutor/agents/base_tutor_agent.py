@@ -14,6 +14,7 @@ from ..context import EnglishTutorContext
 
 logger = logging.getLogger(__name__)
 
+TRUNCATE_CHAT_CTX = 30
 
 class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
     """
@@ -110,7 +111,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
                 # Truncate and merge previous chat history
                 previous_items = self._truncate_chat_ctx(
                     userdata.previous_agent.chat_ctx.items,
-                    keep_last_n_messages=10
+                    keep_last_n_messages=TRUNCATE_CHAT_CTX
                 )
 
                 # Avoid duplicates
@@ -263,7 +264,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
             try:
                 agent_name = self.__class__.__name__
                 logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - sending AI instruction")
-                self.session.generate_reply(user_input=checkpoint.ai_instruction)
+                await self.session.generate_reply(user_input=checkpoint.ai_instruction)
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 
@@ -272,10 +273,9 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
         Handle final checkpoint that triggers agent handoff.
         
         For ConversationPartner: triggers transfer_to_feedback()
-        For FeedbackProvider: triggers finalize_session()
         """
         agent_name = self.__class__.__name__
-        logger.warning(f"{agent_name}: Final checkpoint reached - triggering handoff")
+        logger.warning(f"{agent_name}: Final checkpoint reached - triggering handoff. Checkpoint => {checkpoint.time}")
         
         try:
             await self.session.generate_reply(user_input=checkpoint.ai_instruction)

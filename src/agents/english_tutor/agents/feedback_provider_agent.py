@@ -64,9 +64,12 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
         logger.info(f"Feedback context: {feedback_context}")
 
         # Generate feedback based on conversation history
-        self.session.generate_reply(
+        await self.session.generate_reply(
             user_input=feedback_context
         )
+        logger.info("FeedbackProviderAgent: Feedback generated")
+        await self._graceful_shutdown()
+        logger.info("Session shutdown gracefully after feedback")
 
     def get_goodbye_instruction(self) -> str:
         """Get goodbye instruction from config."""
@@ -75,23 +78,3 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
     def get_session_duration(self) -> int:
         """Get session duration from timing config."""
         return self.get_timing_config().max_duration
-
-    @function_tool()
-    async def finalize_session(
-        self,
-        context: RunContext[EnglishTutorContext]
-    ):
-        """
-        Finalize the session after providing feedback.
-
-        Use this function after you've completed the closure statement
-        to signal that the session should end gracefully.
-
-        Returns:
-            Session finalization confirmation
-        """
-        logger.info("Session finalized - preparing to end")
-
-        # The session will end naturally after this
-        # No need to explicitly trigger anything - LiveKit handles it
-        self._graceful_shutdown()

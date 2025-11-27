@@ -255,7 +255,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
 
     async def _on_checkpoint_reached(self, checkpoint: Checkpoint, idx: int) -> None:
         """
-        Handle regular checkpoint by sending AI instruction.
+        Handle regular checkpoint by queuing AI instruction.
         
         This is called for non-final checkpoints to give the agent
         guidance about timing (e.g., "wrap up soon").
@@ -263,10 +263,27 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
         if checkpoint.ai_instruction:
             try:
                 agent_name = self.__class__.__name__
-                logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - sending AI instruction")
-                await self.session.generate_reply(instructions=checkpoint.ai_instruction)
+                logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - queuing AI instruction")
+                await self._queue_checkpoint_instruction(checkpoint.ai_instruction)
             except Exception as e:
-                logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
+                logger.warning(f"Failed to queue checkpoint {idx + 1} instruction: {e}")
+
+    async def _queue_checkpoint_instruction(self, instruction: str) -> None:
+        """
+        Insert the checkpoint instruction into the chat context as a system message.
+        
+        This ensures the instruction is available for the agent's reasoning
+        without triggering an immediate (and potentially interruptive) reply.
+        """
+        system_msg = {
+            "role": "system",
+            "content": instruction,
+        }
+        
+        # Update the session's chat context (adds the message and persists it)
+        # Note: chat_ctx.add_message returns a new ChatContext instance
+        new_chat_ctx = self.session.chat_ctx.add_message(**system_msg)
+        await self.session.update_chat_ctx(new_chat_ctx)
 
     async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """

@@ -51,6 +51,10 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
         logger.info("FeedbackProviderAgent: Starting feedback phase")
 
         userdata: EnglishTutorContext = self.session.userdata
+        await self.session.generate_reply(
+            instructions=("Say this 'Hold on. We are running out of time. Let's wrap up now'"),
+            allow_interruptions=False
+        )
 
         # Build context about the session for the AI
         topics_str = ", ".join(userdata.topics_discussed) if userdata.topics_discussed else "various topics"
@@ -58,23 +62,22 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
         feedback_context = (
             f"The student discussed: {topics_str}. "
             f"Provide constructive feedback based on the conversation. "
-            f"Start with 'Konjam notes eduthukonga, sila corrections share panren.'"
+            # f"Start with 'Konjam notes eduthukonga, sila corrections share panren.'"
         )
 
         logger.info(f"Feedback context: {feedback_context}")
 
         # Generate feedback based on conversation history
         await self.session.generate_reply(
-            user_input=feedback_context
+            instructions=feedback_context,
+            allow_interruptions=False
         )
         logger.info("FeedbackProviderAgent: Feedback generated")
         await self._graceful_shutdown()
         logger.info("Session shutdown gracefully after feedback")
 
     def get_goodbye_instruction(self) -> str:
-        """Get goodbye instruction from config."""
         return "Say goodbye professionally in English"
 
     def get_session_duration(self) -> int:
-        """Get session duration from timing config."""
         return self.get_timing_config().max_duration

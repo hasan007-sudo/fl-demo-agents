@@ -37,9 +37,8 @@ CONVERSATION_TIMING_CONFIG = SessionTimingConfig(
             time=240,  # 4 minutes - trigger handoff
             frontend_event=True,
             ai_instruction=(
-                "Time to transition to feedback. "
-                "Use the transfer_to_feedback() tool now to hand off "
-                "to the Feedback Provider."
+                "Wait for the current conversation to finish naturally. "
+                "Use the transfer_to_feedback() tool to hand off to the Feedback Provider."
             ),
             is_final=True
         ),

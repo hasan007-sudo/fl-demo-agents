@@ -67,7 +67,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
         self,
         context: RunContext[EnglishTutorContext],
         topic: str
-    ) -> str:
+    ) -> bool:
         """
         Record a topic that was discussed during the conversation.
 
@@ -79,11 +79,11 @@ class ConversationPartnerAgent(BaseTutorAgent):
                    "travel experiences", "daily routine")
 
         Returns:
-            Confirmation message
+            True if topic was recorded successfully
         """
         context.userdata.add_topic(topic)
         logger.info(f"Topic recorded: {topic}")
-        return f"Topic '{topic}' recorded successfully."
+        return True
 
     @function_tool()
     async def transfer_to_feedback(
@@ -103,9 +103,4 @@ class ConversationPartnerAgent(BaseTutorAgent):
             The FeedbackProviderAgent instance
         """
         logger.info("Transferring to FeedbackProviderAgent")
-
-        # Optional: Say a brief transition message
-        # (User preference: "brief pause with tone change")
-        # The feedback agent will start directly, so no explicit message needed
-
         return await self._transfer_to_agent("feedback")

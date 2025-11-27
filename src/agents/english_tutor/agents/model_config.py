@@ -9,6 +9,7 @@ IMPORTANT: Uses lazy initialization to ensure models are created AFTER
 environment variables (like GEMINI_API_KEY) are loaded.
 """
 
+from google.genai import types
 from livekit.agents import (
     inference
 )
@@ -46,13 +47,18 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
             temperature=0.8,
             conn_options=APIConnectOptions(
                 timeout=60
-            )
+            ),
+            realtime_input_config=types.RealtimeInputConfig(
+                automatic_activity_detection=types.AutomaticActivityDetection(
+                    disabled=True,
+                ),
+            ),
         ),
+        "vad": silero.VAD.load(),
         # # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
         # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
-        # "vad": silero.VAD.load(),
     }
 
     return config
@@ -82,16 +88,21 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
         "llm": GoogleRealtimeModel(
             model="gemini-2.5-flash-native-audio-preview-09-2025",
             voice=voice or "Charon",  # Same voice for consistency
-            temperature=0.7,  # Slightly lower for more consistent feedback
+            temperature=0.6,  # Slightly lower for more consistent feedback
             conn_options=APIConnectOptions(
                 timeout=60
-            )
+            ),
+            realtime_input_config=types.RealtimeInputConfig(
+                automatic_activity_detection=types.AutomaticActivityDetection(
+                    disabled=True,
+                ),
+            ),
         ),
+        "vad": silero.VAD.load(),
         # # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(language="en"),
         # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
-        # "vad": silero.VAD.load(),
     }
 
     return config

@@ -17,7 +17,8 @@ from livekit.plugins import inworld
 from livekit.agents.types import APIConnectOptions
 from typing import Dict, Any, Optional
 from livekit.plugins import openai, deepgram, cartesia, silero
-from livekit.plugins.google.beta.realtime import RealtimeModel as GoogleRealtimeModel
+from livekit.plugins.google.beta.realtime import RealtimeModel
+from openai.types.beta.realtime.session import TurnDetection
 
 
 # =============================================================================
@@ -41,7 +42,7 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
     """
     # Primary configuration: Google Gemini Realtime
     config = {
-        "llm": GoogleRealtimeModel(
+        "llm": RealtimeModel(
             model="gemini-2.5-flash-native-audio-preview-09-2025",
             voice=voice or "Charon",  # Indian English voice
             temperature=0.8,
@@ -54,8 +55,8 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
                 ),
             ),
         ),
-        "vad": silero.VAD.load(),
-        "turn_detection": "vad",
+        # "vad": silero.VAD.load(),
+        # "turn_detection": "vad",
         # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
@@ -86,7 +87,7 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
     """
     # Primary configuration: Google Gemini Realtime (same as conversation)
     config = {
-        "llm": GoogleRealtimeModel(
+        "llm": RealtimeModel(
             model="gemini-2.5-flash-native-audio-preview-09-2025",
             voice=voice or "Charon",  # Same voice for consistency
             temperature=0.6,  # Slightly lower for more consistent feedback
@@ -102,8 +103,8 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
                 ),
             ),
         ),
-        "vad": silero.VAD.load(),
-        "turn_detection": "vad",
+        # "vad": silero.VAD.load(),
+        # "turn_detection": "vad",
         # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(language="en"),

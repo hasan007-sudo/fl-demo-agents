@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import Optional
 from livekit.agents import AgentSession
 from livekit.agents.llm import ChatContext
-from core.agents.base import BaseAgent, AgentMetadata
+from core.agents.base import BaseAgent
 from core.agents.mixins.timing import TimingMixin
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from core.prompts.base import BasePromptBuilder
@@ -52,12 +52,6 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
             **kwargs
         )
         logger.info(f"{self.__class__.__name__} initialized")
-
-    @property
-    @abstractmethod
-    def metadata(self) -> AgentMetadata:
-        """Get metadata about this agent type."""
-        pass
 
     def _create_default_prompt_builder(self) -> BasePromptBuilder:
         """Not used - we receive instructions externally."""
@@ -131,7 +125,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
                 chat_ctx.add_message(
                     role="system",
                     content=(
-                        f"You are now the {agent_name}. "
+                        f"You are now a {agent_name}. "
                         f"Session state: {userdata.summarize()}"
                     )
                 )
@@ -264,7 +258,8 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
             try:
                 agent_name = self.__class__.__name__
                 logger.info(f"{agent_name}: Checkpoint {idx + 1} reached - queuing AI instruction")
-                await self._queue_checkpoint_instruction(checkpoint.ai_instruction)
+                await self.session.generate_reply(instructions=checkpoint.ai_instruction)
+                # await self._queue_checkpoint_instruction(checkpoint.ai_instruction)
             except Exception as e:
                 logger.warning(f"Failed to queue checkpoint {idx + 1} instruction: {e}")
 
@@ -282,8 +277,10 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
         
         # Update the session's chat context (adds the message and persists it)
         # Note: chat_ctx.add_message returns a new ChatContext instance
-        new_chat_ctx = self.session.chat_ctx.add_message(**system_msg)
-        await self.session.update_chat_ctx(new_chat_ctx)
+        chat_ctx = self.chat_ctx.copy()
+        chat_ctx.add_message(**system_msg)
+        self.update_chat_ctx(chat_ctx)
+        logger.info(f"Context updated after checkpoint instruction: {instruction}")
 
     async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """
@@ -295,7 +292,7 @@ class BaseTutorAgent(TimingMixin, BaseAgent[EnglishTutorContext]):
         logger.warning(f"{agent_name}: Final checkpoint reached - triggering handoff. Checkpoint => {checkpoint.time}")
         
         try:
-            await self.session.generate_reply(user_input=checkpoint.ai_instruction)
+            await self.session.generate_reply(instructions=checkpoint.ai_instruction)
             logger.info(f"{agent_name}: Handoff instruction sent")
             
         except Exception as e:

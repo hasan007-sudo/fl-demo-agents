@@ -25,27 +25,6 @@ logger = logging.getLogger(__name__)
 # Type variable for context types
 TContext = TypeVar('TContext', bound=BaseContext)
 
-
-@dataclass
-class AgentMetadata:
-    """Metadata about an agent type."""
-    name: str
-    version: str
-    description: str
-    supported_languages: list[str]
-    capabilities: list[str]
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert metadata to dictionary."""
-        return {
-            "name": self.name,
-            "version": self.version,
-            "description": self.description,
-            "supported_languages": self.supported_languages,
-            "capabilities": self.capabilities
-        }
-
-
 class BaseAgent(ABC, Agent, Generic[TContext]):
     """
     Abstract base class for all agents in the system.
@@ -58,7 +37,6 @@ class BaseAgent(ABC, Agent, Generic[TContext]):
         context: Agent-specific context data from frontend
         prompt_builder: Builds instructions from context
         session: Current LiveKit session
-        metadata: Agent metadata (name, version, capabilities)
     """
 
     def __init__(
@@ -85,17 +63,6 @@ class BaseAgent(ABC, Agent, Generic[TContext]):
         super().__init__(instructions=instructions, **kwargs)
 
         logger.info(f"Initialized {self.__class__.__name__} with context: {context}")
-
-    @property
-    @abstractmethod
-    def metadata(self) -> AgentMetadata:
-        """
-        Get metadata about this agent type.
-
-        Returns:
-            AgentMetadata containing information about the agent
-        """
-        pass
 
     @property
     def context(self) -> Optional[TContext]:

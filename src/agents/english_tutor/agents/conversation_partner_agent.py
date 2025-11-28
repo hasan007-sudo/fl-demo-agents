@@ -5,7 +5,7 @@ import logging
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
 
-from core.agents.base import AgentMetadata
+from core.agents.base import BaseAgent
 from core.session.checkpoints import SessionTimingConfig
 from .base_tutor_agent import BaseTutorAgent
 from ..context import EnglishTutorContext
@@ -26,17 +26,6 @@ class ConversationPartnerAgent(BaseTutorAgent):
     students in natural dialogue without real-time corrections.
     After ~4 minutes, it transfers to the FeedbackProviderAgent.
     """
-
-    @property
-    def metadata(self) -> AgentMetadata:
-        """Get metadata about this agent."""
-        return AgentMetadata(
-            name="ConversationPartner",
-            version="1.0.0",
-            description="Friendly conversation partner for English speaking practice",
-            supported_languages=["en"],
-            capabilities=["conversation", "topic_tracking", "agent_handoff"]
-        )
 
     def get_timing_config(self) -> SessionTimingConfig:
         """Get timing configuration for conversation phase."""
@@ -59,7 +48,7 @@ class ConversationPartnerAgent(BaseTutorAgent):
 
         # Generate initial greeting
         await self.session.generate_reply(
-            user_input="Greet the student warmly and begin the onboarding process."
+            instructions="Greet the student warmly and begin the onboarding process."
         )
 
     @function_tool()
@@ -93,11 +82,8 @@ class ConversationPartnerAgent(BaseTutorAgent):
         """
         Transfer control to the Feedback Provider agent.
 
-        Use this function when you've completed about 4 minutes of speaking
+        Use this function when you've completed about 3 minutes of speaking
         practice and are ready to transition to the feedback phase.
-
-        The system will automatically trigger this after the time checkpoint,
-        but you can also call it manually if the conversation naturally concludes.
 
         Returns:
             The FeedbackProviderAgent instance

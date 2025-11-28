@@ -30,6 +30,7 @@ CONVERSATION_TIMING_CONFIG = SessionTimingConfig(
                 "You've been conversing for 3.5 minutes. "
                 "Continue the conversation naturally. "
                 "In about 30 seconds, you'll need to transfer to feedback."
+                # "In about 5 seconds, you'll need to transfer to feedback."
             ),
             is_final=False
         ),

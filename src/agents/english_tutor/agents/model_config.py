@@ -55,7 +55,8 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
             ),
         ),
         "vad": silero.VAD.load(),
-        # # for local
+        "turn_detection": "vad",
+        # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
         # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
@@ -92,6 +93,9 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
             conn_options=APIConnectOptions(
                 timeout=60
             ),
+            # thinking_config=types.ThinkingConfig(
+            #     include_thoughts=False,
+            # ),
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(
                     disabled=True,
@@ -99,7 +103,8 @@ def _create_feedback_model_config(voice: Optional[str] = None) -> Dict[str, Any]
             ),
         ),
         "vad": silero.VAD.load(),
-        # # for local
+        "turn_detection": "vad",
+        # for local
         # "llm": openai.LLM(model="gpt-4o-mini"),
         # "stt": inference.STT(language="en"),
         # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),

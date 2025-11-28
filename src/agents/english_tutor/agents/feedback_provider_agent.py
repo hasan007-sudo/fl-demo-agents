@@ -5,7 +5,6 @@ import logging
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
 
-from core.agents.base import AgentMetadata
 from core.session.checkpoints import SessionTimingConfig
 from .base_tutor_agent import BaseTutorAgent
 from ..context import EnglishTutorContext
@@ -26,17 +25,6 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
     history and ends the session with a polished closing statement.
     """
 
-    @property
-    def metadata(self) -> AgentMetadata:
-        """Get metadata about this agent."""
-        return AgentMetadata(
-            name="FeedbackProvider",
-            version="1.0.0",
-            description="Provides constructive feedback in Tanglish and professional closure",
-            supported_languages=["en", "ta"],
-            capabilities=["feedback", "session_finalization", "bilingual_communication"]
-        )
-
     def get_timing_config(self) -> SessionTimingConfig:
         """Get timing configuration for feedback phase."""
         return FEEDBACK_TIMING_CONFIG
@@ -51,17 +39,14 @@ class FeedbackProviderAgent(BaseTutorAgent, ShutdownMixin):
         logger.info("FeedbackProviderAgent: Starting feedback phase")
 
         userdata: EnglishTutorContext = self.session.userdata
-        await self.session.generate_reply(
-            instructions=("Say this 'Hold on. We are running out of time. Let's wrap up now'"),
-            allow_interruptions=False
-        )
 
         # Build context about the session for the AI
         topics_str = ", ".join(userdata.topics_discussed) if userdata.topics_discussed else "various topics"
 
         feedback_context = (
+            f"Start by saying exactly: 'Hold on. We are running out of time. Let's wrap up now'. "
+            f"Then, provide constructive feedback based on the conversation. "
             f"The student discussed: {topics_str}. "
-            f"Provide constructive feedback based on the conversation. "
             # f"Start with 'Konjam notes eduthukonga, sila corrections share panren.'"
         )
 

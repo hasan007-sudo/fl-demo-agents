@@ -7,10 +7,7 @@ from src.agents.english_tutor.context import EnglishTutorContext
 
 # Mock concrete implementation of abstract BaseTutorAgent
 class MockTutorAgent(BaseTutorAgent):
-    @property
-    def metadata(self):
-        return MagicMock()
-    
+
     def get_timing_config(self):
         return MagicMock()
     

@@ -3,7 +3,7 @@
 import logging
 
 from livekit.agents import AgentSession
-from core.agents.base import BaseAgent, AgentMetadata
+from core.agents.base import BaseAgent
 from core.agents.mixins import TimingMixin, ShutdownMixin
 from core.prompts.base import BasePromptBuilder
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
@@ -19,24 +19,6 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
 
     auto_register = True
     registration_name = "interview_preparer"
-
-    @property
-    def metadata(self) -> AgentMetadata:
-        """Get metadata about this agent."""
-        return AgentMetadata(
-            name="Interview Preparer",
-            version="1.0.0",
-            description="AI interview coach for mock interview practice",
-            supported_languages=["en"],
-            capabilities=[
-                "mock_interviews",
-                "behavioral_questions",
-                "technical_interviews",
-                "interview_feedback",
-                "answer_coaching",
-                "confidence_building"
-            ]
-        )
 
     def _create_default_prompt_builder(self) -> BasePromptBuilder:
         """Create the default prompt builder for Interview Preparer."""

@@ -158,15 +158,15 @@ async def create_english_tutor_multi_agent_session(
     # Create both agents
     conversation_agent = ConversationPartnerAgent(
         instructions=conversation_instructions,
+        **conversation_config,
         context=context,
-        **conversation_config
     )
     logger.info("Created ConversationPartnerAgent")
 
     feedback_agent = FeedbackProviderAgent(
         instructions=feedback_instructions,
+        **feedback_config,
         context=context,
-        **feedback_config
     )
     logger.info("Created FeedbackProviderAgent")
 
@@ -177,7 +177,7 @@ async def create_english_tutor_multi_agent_session(
     
     logger.info(f"Session context initialized: {context.summarize()}")
 
-    # Create session with context as userdata
+    # Create session WITH llm/stt/tts (following LiveKit's standard pattern)
     session = AgentSession[EnglishTutorContext](
         userdata=context,
         resume_false_interruption=True,

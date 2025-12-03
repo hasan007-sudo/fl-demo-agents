@@ -229,13 +229,11 @@ async def entrypoint(ctx: JobContext):
     logger.info(f"Starting session with agent type: {agent_type}")
     logger.info(f"Metadata keys: {list(metadata.keys())}")
 
-    # Route to appropriate agent setup
     if agent_type == "english_tutor":
         # Multi-agent orchestration for English Tutor
         context = EnglishTutorContext.from_metadata(metadata)
         logger.info(f"Created English Tutor context: {context.agent_type}")
         await create_english_tutor_multi_agent_session(ctx, context)
-
     else:
         # Single-agent for Interview Preparer
         context = InterviewContext.from_metadata(metadata)

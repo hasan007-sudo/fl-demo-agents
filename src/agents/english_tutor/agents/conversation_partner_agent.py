@@ -89,4 +89,5 @@ class ConversationPartnerAgent(BaseTutorAgent):
             The FeedbackProviderAgent instance
         """
         logger.info("Transferring to FeedbackProviderAgent")
+        await context.wait_for_playout()
         return await self._transfer_to_agent("feedback")

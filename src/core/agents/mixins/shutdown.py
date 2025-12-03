@@ -1,5 +1,6 @@
 """Graceful shutdown mixin for agents."""
 
+import asyncio
 import logging
 from abc import ABC, abstractmethod
 
@@ -66,7 +67,7 @@ class ShutdownMixin(ABC):
                 #     speech_handle,
                 #     timeout=30
                 # )
-
+            await asyncio.sleep(1)
             self._lifecycle.mark_ended()
             logger.info("Session marked as ended")
 

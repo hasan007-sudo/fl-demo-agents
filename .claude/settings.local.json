@@ -19,7 +19,11 @@
       "mcp__livekit-docs__get_pages",
       "mcp__livekit-docs__get_docs_overview",
       "Bash(python -m py_compile:*)",
-      "mcp__livekit-docs__get_python_agent_example"
+      "mcp__livekit-docs__get_python_agent_example",
+      "WebFetch(domain:langfuse.com)",
+      "WebFetch(domain:www.deepchecks.com)",
+      "WebFetch(domain:www.comet.com)",
+      "WebFetch(domain:www.confident-ai.com)"
     ],
     "deny": [],
     "ask": []

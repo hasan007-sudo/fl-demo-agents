@@ -7,7 +7,7 @@ This file handles:
 3. Setting up the session with proper configuration
 """
 
-from core.instrumentation.langfuse_setup import setup_langfuse_for_session
+from core.instrumentation.opik_setup import setup_opik_for_session
 from livekit.plugins import openai
 import logging
 import os
@@ -36,7 +36,7 @@ try:
     from .core.agents.registry import registry
     from .core.agents.factory import AgentFactory
     from .core.session.voice_manager import VoiceManager
-    from .core.instrumentation.langfuse_setup import setup_langfuse, flush_traces
+    from .core.instrumentation.opik_setup import setup_opik, flush_traces
     # from .core.transcripts import TranscriptHandler  # Disabled - LiveKit handles transcripts automatically
     from .agents.english_tutor.agents import (
         ConversationPartnerAgent,
@@ -52,7 +52,7 @@ except ImportError:
     from core.agents.registry import registry
     from core.agents.factory import AgentFactory
     from core.session.voice_manager import VoiceManager
-    from core.instrumentation.langfuse_setup import setup_langfuse, flush_traces
+    from core.instrumentation.opik_setup import setup_opik, flush_traces
     # from core.transcripts import TranscriptHandler  # Disabled - LiveKit handles transcripts automatically
     from agents.english_tutor.agents import (
         ConversationPartnerAgent,
@@ -232,14 +232,14 @@ async def entrypoint(ctx: JobContext):
         # Multi-agent orchestration for English Tutor
         context = EnglishTutorContext.from_metadata(metadata)
         logger.info(f"Created English Tutor context: {context.agent_type}")
-        setup_langfuse_for_session(ctx, context)
+        setup_opik_for_session(ctx, context)
 
         await create_english_tutor_multi_agent_session(ctx, context)
     else:
         # Single-agent for Interview Preparer
         context = InterviewContext.from_metadata(metadata)
         logger.info(f"Created context: {context.agent_type}")
-        setup_langfuse_for_session(ctx, context)
+        setup_opik_for_session(ctx, context)
 
         # Select voice
         selected_voice = VoiceManager.get_voice_for_agent(agent_type, context, provider="google")

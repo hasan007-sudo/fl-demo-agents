@@ -12,10 +12,13 @@ dependencies = [
     "livekit-agents[cartesia,deepgram,google,inworld,openai,silero,turn-detector]~=1.2",
     "livekit-plugins-noise-cancellation~=0.2",
     "python-dotenv",
-    # Langfuse observability
+    # Observability (Opik - primary, Langfuse - legacy)
+    "opik>=1.0",
     "langfuse>=2.0",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp-proto-http",
+    # Evaluation (DeepEval)
+    "deepeval>=1.0",
 ]
 
 [dependency-groups]

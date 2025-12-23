@@ -55,7 +55,7 @@ def setup_langfuse(metadata: Dict[str, Any] | None = None) -> bool:
     return True
 
 
-def flush_traces():
+async def flush_traces():
     """Flush pending traces on shutdown."""
     if _tracer_provider:
         _tracer_provider.force_flush()

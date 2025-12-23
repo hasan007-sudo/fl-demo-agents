@@ -86,22 +86,3 @@ TIMING_CONFIG = SessionTimingConfig(
         )
     ]
 )
-
-GOODBYE_INSTRUCTION = (
-    "Provide a brief, warm closing with feedback for the student "
-    "as given in your system prompt. "
-    "Do NOT mention that time is up or that the session is ending. "
-    "Keep it under 20 seconds."
-)
-
-
-# =============================================================================
-# GOODBYE INSTRUCTIONS (per agent)
-# =============================================================================
-
-CONVERSATION_GOODBYE = "Transition smoothly to feedback phase using transfer_to_feedback() tool."
-
-FEEDBACK_GOODBYE = (
-    "Provide final closing statement as per your system prompt, "
-    "then call finalize_session(). Keep it under 20 seconds."
-)

@@ -41,6 +41,7 @@ class SpeakWithAIContext(BaseContext):
     # FRONTEND CONTEXT (from room metadata)
     # =============================================================================
     student_name: Optional[str] = None
+    email: Optional[str] = None
     gender_preference: Optional[str] = None  # "male" or "female" for voice selection
 
     # Questions list from frontend
@@ -172,6 +173,7 @@ class SpeakWithAIContext(BaseContext):
         return cls(
             agent_type="speak_with_ai",
             student_name=nested_context.get("student_name") or nested_context.get("studentName"),
+            email=nested_context.get("email"),
             gender_preference=nested_context.get("gender_preference") or nested_context.get("genderPreference"),
             questions=questions,
         )

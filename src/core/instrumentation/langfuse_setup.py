@@ -2,6 +2,7 @@
 
 from agents.interview_preparer.context import InterviewContext
 from agents.english_tutor.context import EnglishTutorContext
+from agents.speak_with_ai.context import SpeakWithAIContext
 from livekit.agents.job import JobContext
 import os
 import base64
@@ -62,13 +63,13 @@ async def flush_traces():
 
 def setup_langfuse_for_session(
     ctx: JobContext,
-    context: EnglishTutorContext | InterviewContext
+    context: EnglishTutorContext | InterviewContext | SpeakWithAIContext
 ) -> None:
     """
     Extract user information from context and setup Langfuse tracing.
     Args:
         ctx: Job context from LiveKit
-        context: Either EnglishTutorContext or InterviewContext instance
+        context: Either EnglishTutorContext, InterviewContext, or SpeakWithAIContext instance
     """
     if isinstance(context, EnglishTutorContext):
         user_email = context.email
@@ -80,6 +81,11 @@ def setup_langfuse_for_session(
         user_name = context.candidate_name
         agent_type = "interview_preparer"
         trace_prefix = "Int-Prep"
+    elif isinstance(context, SpeakWithAIContext):
+        user_email = context.email
+        user_name = context.student_name
+        agent_type = "speak_with_ai"
+        trace_prefix = "Speak-AI"
     else:
         logger.warning(f"Unknown context type: {type(context)}")
         user_email = None
@@ -96,6 +102,12 @@ def setup_langfuse_for_session(
         "langfuse.trace.name": session_identifier,
         "langfuse.user.id": user_identifier,
     }
+
+    # Add user name and email to Langfuse metadata if available
+    if user_name:
+        langfuse_metadata["langfuse.user.name"] = user_name
+    if user_email:
+        langfuse_metadata["langfuse.user.email"] = user_email
 
     logger.info(
         f"Setting up Langfuse for {agent_type}: "

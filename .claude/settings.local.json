@@ -22,7 +22,8 @@
       "mcp__livekit-docs__get_python_agent_example",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "Bash(.venv/bin/python:*)"
+      "Bash(.venv/bin/python:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

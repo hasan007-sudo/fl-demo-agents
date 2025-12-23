@@ -38,24 +38,24 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
         Dictionary of model configuration
     """
     config = {
-        # "llm": RealtimeModel(
-        #     model="gemini-2.5-flash-native-audio-preview-09-2025",
-        #     voice=voice or "Charon",
-        #     temperature=0.8,
-        #     conn_options=APIConnectOptions(
-        #         timeout=60
-        #     ),
-        #     realtime_input_config=types.RealtimeInputConfig(
-        #         automatic_activity_detection=types.AutomaticActivityDetection(
-        #             disabled=True,
-        #         ),
-        #     ),
-        # ),
+        "llm": RealtimeModel(
+            model="gemini-2.5-flash-native-audio-preview-09-2025",
+            voice=voice or "Charon",
+            temperature=0.8,
+            conn_options=APIConnectOptions(
+                timeout=60
+            ),
+            realtime_input_config=types.RealtimeInputConfig(
+                automatic_activity_detection=types.AutomaticActivityDetection(
+                    disabled=True,
+                ),
+            ),
+        ),
         "vad": silero.VAD.load(),
         "turn_detection": "vad",
-        "llm": openai.LLM(model="gpt-4o-mini"),
-        "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
-        "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
+        # "llm": openai.LLM(model="gpt-4o-mini"),
+        # "stt": inference.STT(model="assemblyai/universal-streaming", language="en"),
+        # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
         # "stt": "assemblyai/universal-streaming", # Docs mention VAD only works when STT is present
     }
 

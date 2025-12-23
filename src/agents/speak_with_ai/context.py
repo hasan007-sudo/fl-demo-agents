@@ -136,7 +136,7 @@ class SpeakWithAIContext(BaseContext):
         for i, q in enumerate(self.questions, 1):
             status = "[DISCUSSED]" if q.identifier in self.questions_discussed else "[AVAILABLE]"
             lines.append(
-                f"{i}. {status} {q.text}\n"
+                f"{i}. {status} ID: \"{q.identifier}\" - {q.text}\n"
                 f"   Hint: {q.hint}\n"
                 f"   Context: {q.description}"
             )

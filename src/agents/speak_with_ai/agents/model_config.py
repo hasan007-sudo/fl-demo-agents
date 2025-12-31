@@ -43,7 +43,8 @@ def _create_conversation_model_config(voice: Optional[str] = None) -> Dict[str, 
             voice=voice or "Charon",
             temperature=0.8,
             conn_options=APIConnectOptions(
-                timeout=60
+                timeout=120,
+                max_retry=3
             ),
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(

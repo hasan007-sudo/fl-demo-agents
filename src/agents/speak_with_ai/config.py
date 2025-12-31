@@ -2,10 +2,6 @@
 
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 
-# =============================================================================
-# MULTI-AGENT SESSION TIMING
-# =============================================================================
-
 # Total session duration
 MAX_SESSION_DURATION = 600  # 10 minutes total
 
@@ -14,11 +10,6 @@ CONVERSATION_DURATION = 480  # 8 minutes
 
 # Feedback duration (2 minutes)
 FEEDBACK_DURATION = 120  # 2 minutes
-
-
-# =============================================================================
-# CONVERSATION TIMING CONFIG
-# =============================================================================
 
 CONVERSATION_TIMING_CONFIG = SessionTimingConfig(
     max_duration=CONVERSATION_DURATION,
@@ -57,11 +48,6 @@ CONVERSATION_TIMING_CONFIG = SessionTimingConfig(
         ),
     ]
 )
-
-
-# =============================================================================
-# FEEDBACK TIMING CONFIG
-# =============================================================================
 
 FEEDBACK_TIMING_CONFIG = SessionTimingConfig(
     max_duration=FEEDBACK_DURATION,

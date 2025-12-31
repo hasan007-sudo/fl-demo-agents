@@ -1,5 +1,6 @@
 """Main entry point with agent routing based on agentType."""
 
+from asyncio.tasks import sleep
 import logging
 import json
 from pathlib import Path
@@ -84,6 +85,7 @@ async def entrypoint(ctx: JobContext):
 
     elif agent_type == "speak_with_ai":
         context = SpeakWithAIContext.from_metadata(metadata)
+        # await sleep(500)
         setup_langfuse_for_session(ctx, context)
         await create_speak_with_ai_session(ctx, context)
 

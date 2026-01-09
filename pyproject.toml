@@ -16,6 +16,7 @@ dependencies = [
     "langfuse>=2.0",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp-proto-http",
+    "deepeval>=2.0.0",
 ]
 
 [dependency-groups]

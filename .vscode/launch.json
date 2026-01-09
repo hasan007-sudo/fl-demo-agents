@@ -19,7 +19,7 @@
       "request": "launch",
       "module": "main",
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}/src",
+      "cwd": "${workspaceFolder}",
       "args": ["dev"]
     },
     {

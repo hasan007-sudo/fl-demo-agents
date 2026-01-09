@@ -1,5 +1,6 @@
 """Main entry point with agent routing based on agentType."""
 
+from livekit.agents.worker import AgentServer
 from asyncio.tasks import sleep
 import logging
 import json
@@ -26,6 +27,7 @@ try:
     from .core.instrumentation.langfuse_setup import setup_langfuse_for_session
     from .agents.english_tutor import EnglishTutorContext, create_session as create_english_tutor_session
     from .agents.speak_with_ai import SpeakWithAIContext, create_session as create_speak_with_ai_session
+    from .agents.interview_agent import InterviewAgentContext, create_session as create_interview_agent_session
     from .agents.interview_preparer.agent import InterviewPreparerAgent
     from .agents.interview_preparer.context import InterviewContext
 except ImportError:
@@ -35,6 +37,7 @@ except ImportError:
     from core.instrumentation.langfuse_setup import setup_langfuse_for_session
     from agents.english_tutor import EnglishTutorContext, create_session as create_english_tutor_session
     from agents.speak_with_ai import SpeakWithAIContext, create_session as create_speak_with_ai_session
+    from agents.interview_agent import InterviewAgentContext, create_session as create_interview_agent_session
     from agents.interview_preparer.agent import InterviewPreparerAgent
     from agents.interview_preparer.context import InterviewContext
 
@@ -85,9 +88,13 @@ async def entrypoint(ctx: JobContext):
 
     elif agent_type == "speak_with_ai":
         context = SpeakWithAIContext.from_metadata(metadata)
-        # await sleep(500)
         setup_langfuse_for_session(ctx, context)
         await create_speak_with_ai_session(ctx, context)
+
+    elif agent_type == "interview_agent":
+        context = InterviewAgentContext.from_metadata(metadata)
+        setup_langfuse_for_session(ctx, context)
+        await create_interview_agent_session(ctx, context)
 
     else:
         context = InterviewContext.from_metadata(metadata)
@@ -136,4 +143,4 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     register_agents()
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm, shutdown_process_timeout=100))

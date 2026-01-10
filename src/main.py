@@ -78,7 +78,7 @@ async def entrypoint(ctx: JobContext):
         logger.error(f"Failed to parse room metadata: {e}")
         metadata = {}
 
-    agent_type = metadata.get("agent_type", "english_tutor")
+    agent_type = metadata.get("agent_type", "speak_with_ai")
     logger.info(f"Starting session with agent type: {agent_type}")
 
     if agent_type == "english_tutor":
@@ -97,6 +97,7 @@ async def entrypoint(ctx: JobContext):
         await create_interview_agent_session(ctx, context)
 
     else:
+        # Interview preparer
         context = InterviewContext.from_metadata(metadata)
         setup_langfuse_for_session(ctx, context)
 

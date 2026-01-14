@@ -15,7 +15,7 @@ source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
     { name = "langfuse" },
-    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "inworld", "openai", "silero", "turn-detector"] },
+    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "inworld", "openai", "sarvam", "silero", "turn-detector"] },
     { name = "livekit-plugins-noise-cancellation" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
@@ -33,7 +33,7 @@ dev = [
 requires-dist = [
     { name = "deepeval", specifier = ">=2.0.0" },
     { name = "langfuse", specifier = ">=2.0" },
-    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "inworld", "openai", "silero", "turn-detector"], specifier = "~=1.3.9" },
+    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "inworld", "openai", "sarvam", "silero", "turn-detector"], specifier = "~=1.3.9" },
     { name = "livekit-plugins-noise-cancellation", specifier = "~=0.2.5" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
@@ -1256,6 +1256,9 @@ inworld = [
 openai = [
     { name = "livekit-plugins-openai" },
 ]
+sarvam = [
+    { name = "livekit-plugins-sarvam" },
+]
 silero = [
     { name = "livekit-plugins-silero" },
 ]
@@ -1386,6 +1389,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6b/fb/a094a875882fe95a1a162dfa02d309c095c4924333e34c64eecb30c42b3e/livekit_plugins_openai-1.3.9.tar.gz", hash = "sha256:c48b382d83ed9701d4031085ea0653d8242298453258247ab200cbf72f7ff0fe", size = 46167, upload-time = "2025-12-19T06:26:51.403Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/70/77f9353c9fac8ff496589ee5842657c2a509e1bcb20bf489c17a491e135e/livekit_plugins_openai-1.3.9-py3-none-any.whl", hash = "sha256:2dce0a192a8c78910f9e423b7984de61a0473c6b52f2d9d075ef8825f1867f15", size = 52944, upload-time = "2025-12-19T06:26:50.541Z" },
+]
+
+[[package]]
+name = "livekit-plugins-sarvam"
+version = "1.3.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents", extra = ["codecs"] },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/3f/2b30e63dd9f1cc9c38972ec2c03315ae639c4faa94dfe701f5fb983aeaee/livekit_plugins_sarvam-1.3.9.tar.gz", hash = "sha256:6263a0517f4e6be3cd5f9d6370ca1bdcd3d9c51c4ffec0ed121b22dfd99dcd2d", size = 19205, upload-time = "2025-12-19T06:26:59.81Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/d9/0401287ecb7eec941fa4e8449e03ac7ecfebf3e68d184b46195bd636b8f2/livekit_plugins_sarvam-1.3.9-py3-none-any.whl", hash = "sha256:5d3817562ac3553d01617ae4ac3177656a844d2632a1db27ab639d0fe982a1f4", size = 20428, upload-time = "2025-12-19T06:26:57.568Z" },
 ]
 
 [[package]]

@@ -113,13 +113,13 @@ class SpeakWithAIEvaluator(BaseEvaluator):
             + "\n".join(f"- {text}" for text in question_texts)
         )
 
-        golden = ConversationalGolden(
+        goldens = ConversationalGolden(
             scenario=scenario,
             expected_outcome=expected_outcome,
             turns=test_case.turns,
             additional_metadata=test_case.additional_metadata,
         )
 
-        dataset = EvaluationDataset(goldens=[golden])
+        dataset = EvaluationDataset(goldens=[goldens])
         dataset.push(alias=dataset_alias)
         logger.info(f"Pushed session {transcript.session_id} to dataset '{dataset_alias}'")

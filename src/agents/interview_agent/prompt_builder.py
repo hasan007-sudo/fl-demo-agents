@@ -54,8 +54,8 @@ class InterviewPromptBuilder(BasePromptBuilder):
         return template.render(**context_dict)
 
     def build(self, context: BaseContext) -> str:
-        """Build prompt using interview template."""
-        template_name = "interview.md"
+        """Build prompt using interview practice template."""
+        template_name = "interview_practice.md"
         logger.info(f"Building prompt using template: {template_name}")
 
         context_dict = {}
@@ -78,7 +78,7 @@ class InterviewPromptBuilder(BasePromptBuilder):
 
     def build_default(self) -> str:
         """Build default prompt when no context is available."""
-        return self._render_template("interview.md", {})
+        return self._render_template("interview_practice.md", {})
 
     def _extract_variables(self, context: BaseContext) -> Dict[str, Any]:
         """Extract variables from context."""

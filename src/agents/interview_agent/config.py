@@ -29,5 +29,6 @@ def get_model_config(voice: Optional[str] = None) -> Dict[str, Any]:
             target_language_code="en-IN",
             speaker=voice or "manisha",
             model="bulbul:v2",
+            pace=0.9,
         ),
     }

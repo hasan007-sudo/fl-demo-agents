@@ -1,12 +1,14 @@
 """Interview Agent for conducting interviews."""
 
 import logging
+import time
 from typing import Optional
 from livekit.agents import AgentSession
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
 
 from core.agents.base import BaseAgent
+from core.agents.mixins.shutdown import ShutdownMixin
 from core.prompts.base import BasePromptBuilder
 from .context import InterviewAgentContext
 from .prompt_builder import InterviewPromptBuilder
@@ -14,7 +16,7 @@ from .prompt_builder import InterviewPromptBuilder
 logger = logging.getLogger(__name__)
 
 
-class InterviewAgent(BaseAgent[InterviewAgentContext]):
+class InterviewAgent(ShutdownMixin, BaseAgent[InterviewAgentContext]):
     """
     Interview Agent for question-guided interviews.
 
@@ -35,7 +37,33 @@ class InterviewAgent(BaseAgent[InterviewAgentContext]):
             prompt_builder=prompt_builder,
             **kwargs
         )
+        self._session_start_time = time.time()
         logger.info("InterviewAgent initialized")
+
+    def get_goodbye_instruction(self) -> str:
+        """Get the instruction for generating goodbye message."""
+        student_name = self._context.student_name if self._context else "candidate"
+
+        if self._context and self._context.mock_interview:
+            # Mock interview: professional, no feedback
+            return (
+                f"The mock interview is now complete. "
+                f"Thank {student_name} professionally for their time. "
+                f"Do NOT provide any feedback or evaluation. "
+                f"Simply inform them the interview has concluded and wish them well."
+            )
+        else:
+            # Practice mode: warm, encouraging with summary
+            return (
+                f"The interview practice session is now complete. "
+                f"Thank {student_name} warmly for their time and participation. "
+                f"Summarize briefly what questions were covered and encourage them "
+                f"to keep practicing. Wish them well for their future interviews."
+            )
+
+    def get_session_duration(self) -> int:
+        """Get the session duration in seconds."""
+        return int(time.time() - self._session_start_time)
 
     def _create_default_prompt_builder(self) -> BasePromptBuilder:
         """Create the default prompt builder."""
@@ -58,12 +86,20 @@ class InterviewAgent(BaseAgent[InterviewAgentContext]):
                 for q in self._context.questions:
                     logger.debug(f"  - {q.identifier}: {q.text[:50]}...")
 
-        await self.session.generate_reply(
-            instructions=(
-                "Greet the candidate warmly and begin the interview. "
-                # "Use the first question naturally as an opener."
+            logger.info(f"Interview mode: {'Mock Interview' if self._context.mock_interview else 'Practice'}")
+
+        # Different greeting based on mode
+        if self._context and self._context.mock_interview:
+            instructions = (
+                "Greet the candidate professionally and begin the mock interview. "
+                "Introduce yourself as the interviewer and set a formal tone."
             )
-        )
+        else:
+            instructions = (
+                "Greet the candidate warmly and begin the interview practice session. "
+            )
+
+        await self.session.generate_reply(instructions=instructions)
 
     async def _on_session_ended_hook(self, session: AgentSession) -> None:
         """Hook for session end logic."""
@@ -146,3 +182,30 @@ class InterviewAgent(BaseAgent[InterviewAgentContext]):
             lines.append(f"- {q.text} (Hint: {q.hint})")
 
         return f"Remaining questions ({len(remaining)}):\n" + "\n".join(lines)
+
+    @function_tool()
+    async def end_session(
+        self,
+        context: RunContext[InterviewAgentContext]
+    ) -> str:
+        """
+        End the interview practice session gracefully.
+
+        Call this when all questions have been practiced and discussed,
+        or when the student indicates they want to end the session.
+        This will trigger a goodbye message and close the session.
+
+        Returns:
+            Confirmation that the session is ending
+        """
+        logger.info("end_session tool called - initiating graceful shutdown")
+
+        # Get summary for logging
+        discussed = len(context.userdata.questions_discussed)
+        total = len(context.userdata.questions)
+        logger.info(f"Session ending - Questions covered: {discussed}/{total}")
+
+        # Trigger graceful shutdown
+        await self._graceful_shutdown()
+
+        return f"Session ending. Covered {discussed} out of {total} questions."

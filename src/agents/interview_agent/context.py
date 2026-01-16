@@ -41,6 +41,9 @@ class InterviewAgentContext(BaseContext):
     gender_preference: Optional[str] = None
     prompt: Optional[str] = None  # Main instructions from room metadata
 
+    # Interview mode: True = realistic mock interview, False = practice with feedback
+    mock_interview: bool = False
+
     # Questions list from frontend
     questions: List[Question] = field(default_factory=list)
 
@@ -140,5 +143,6 @@ class InterviewAgentContext(BaseContext):
             email=nested_context.get("email"),
             gender_preference=nested_context.get("gender_preference") or nested_context.get("genderPreference"),
             prompt=nested_context.get("prompt"),
+            mock_interview=nested_context.get("mock_interview") or nested_context.get("mockInterview") or False,
             questions=questions,
         )

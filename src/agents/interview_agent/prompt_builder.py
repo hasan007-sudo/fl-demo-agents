@@ -54,8 +54,12 @@ class InterviewPromptBuilder(BasePromptBuilder):
         return template.render(**context_dict)
 
     def build(self, context: BaseContext) -> str:
-        """Build prompt using interview practice template."""
-        template_name = "interview_practice.md"
+        """Build prompt using appropriate interview template based on mode."""
+        # Select template based on mock_interview flag
+        if context and isinstance(context, InterviewAgentContext) and context.mock_interview:
+            template_name = "interview_mock.md"
+        else:
+            template_name = "interview_practice.md"
         logger.info(f"Building prompt using template: {template_name}")
 
         context_dict = {}

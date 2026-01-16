@@ -44,6 +44,9 @@ class InterviewAgentContext(BaseContext):
     # Interview mode: True = realistic mock interview, False = practice with feedback
     mock_interview: bool = False
 
+    # Language preference for practice sessions (not used in mock interviews)
+    comfortable_language: Optional[str] = None
+
     # Questions list from frontend
     questions: List[Question] = field(default_factory=list)
 
@@ -144,5 +147,6 @@ class InterviewAgentContext(BaseContext):
             gender_preference=nested_context.get("gender_preference") or nested_context.get("genderPreference"),
             prompt=nested_context.get("prompt"),
             mock_interview=nested_context.get("mock_interview") or nested_context.get("mockInterview") or False,
+            comfortable_language=nested_context.get("comfortable_language") or nested_context.get("comfortableLanguage"),
             questions=questions,
         )

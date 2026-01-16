@@ -1,7 +1,6 @@
 """Interview Agent for conducting interviews."""
 
 import logging
-import time
 from typing import Optional
 from livekit.agents import AgentSession
 from livekit.agents.llm import function_tool
@@ -9,14 +8,17 @@ from livekit.agents.voice import RunContext
 
 from core.agents.base import BaseAgent
 from core.agents.mixins.shutdown import ShutdownMixin
+from core.agents.mixins.timing import TimingMixin
+from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from core.prompts.base import BasePromptBuilder
 from .context import InterviewAgentContext
 from .prompt_builder import InterviewPromptBuilder
+from .config import get_timing_config
 
 logger = logging.getLogger(__name__)
 
 
-class InterviewAgent(ShutdownMixin, BaseAgent[InterviewAgentContext]):
+class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext]):
     """
     Interview Agent for question-guided interviews.
 
@@ -37,8 +39,19 @@ class InterviewAgent(ShutdownMixin, BaseAgent[InterviewAgentContext]):
             prompt_builder=prompt_builder,
             **kwargs
         )
-        self._session_start_time = time.time()
-        logger.info("InterviewAgent initialized")
+        # Store timing config based on mode
+        is_mock = context.mock_interview if context else False
+        self._timing_config = get_timing_config(is_mock)
+
+        logger.info(
+            f"InterviewAgent initialized - Mode: {'Mock Interview' if is_mock else 'Practice'}, "
+            f"Duration: {self._timing_config.max_duration}s, "
+            f"Checkpoints: {len(self._timing_config.checkpoints)}"
+        )
+
+    def get_timing_config(self) -> SessionTimingConfig:
+        """Get the timing configuration for this agent."""
+        return self._timing_config
 
     def get_goodbye_instruction(self) -> str:
         """Get the instruction for generating goodbye message."""
@@ -86,24 +99,43 @@ class InterviewAgent(ShutdownMixin, BaseAgent[InterviewAgentContext]):
                 for q in self._context.questions:
                     logger.debug(f"  - {q.identifier}: {q.text[:50]}...")
 
-            logger.info(f"Interview mode: {'Mock Interview' if self._context.mock_interview else 'Practice'}")
+            mode = 'Mock Interview' if self._context.mock_interview else 'Practice'
+            logger.info(f"Interview mode: {mode}, Duration: {self._timing_config.max_duration}s")
+
+        # Initialize timing (starts checkpoint monitoring)
+        self._init_timing()
 
         # Different greeting based on mode
+        duration_mins = self._timing_config.max_duration // 60
         if self._context and self._context.mock_interview:
             instructions = (
-                "Greet the candidate professionally and begin the mock interview. "
-                "Introduce yourself as the interviewer and set a formal tone."
+                f"Greet the candidate professionally and begin the mock interview. "
+                f"Introduce yourself as the interviewer and set a formal tone. "
+                f"This is a {duration_mins}-minute interview session."
             )
         else:
             instructions = (
-                "Greet the candidate warmly and begin the interview practice session. "
+                f"Greet the candidate warmly and begin the interview practice session. "
+                f"This is a {duration_mins}-minute practice session."
             )
 
         await self.session.generate_reply(instructions=instructions)
 
+    async def _on_checkpoint_reached(self, checkpoint: Checkpoint, idx: int) -> None:
+        """Handle regular checkpoint by sending time awareness instruction."""
+        if checkpoint.ai_instruction:
+            logger.info(f"InterviewAgent: Checkpoint {idx + 1} reached - sending instruction")
+            await self.session.generate_reply(instructions=checkpoint.ai_instruction)
+
+    async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
+        """Handle final checkpoint - end the session gracefully."""
+        logger.warning(f"InterviewAgent: Final checkpoint reached at {checkpoint.time}s - ending session")
+        await self._graceful_shutdown()
+
     async def _on_session_ended_hook(self, session: AgentSession) -> None:
         """Hook for session end logic."""
         logger.info("InterviewAgent: Session ended")
+        await self._stop_timing()
 
     async def _validate_context_hook(self, context: InterviewAgentContext) -> bool:
         """Validate the context."""
@@ -182,6 +214,33 @@ class InterviewAgent(ShutdownMixin, BaseAgent[InterviewAgentContext]):
             lines.append(f"- {q.text} (Hint: {q.hint})")
 
         return f"Remaining questions ({len(remaining)}):\n" + "\n".join(lines)
+
+    @function_tool()
+    async def get_time_remaining(
+        self,
+        context: RunContext[InterviewAgentContext]
+    ) -> str:
+        """
+        Check how much time is remaining in the interview session.
+
+        Use this to be aware of time constraints and pace the interview
+        appropriately.
+
+        Returns:
+            String describing remaining time
+        """
+        total = self._timing_config.max_duration
+        elapsed = int(self._timer.elapsed_time()) if self._timer else 0
+        remaining = max(0, total - elapsed)
+
+        if remaining <= 0:
+            return "Time has expired. Please conclude the interview."
+        elif remaining <= 60:
+            return f"Less than 1 minute remaining ({remaining}s). Wrap up now."
+        elif remaining <= 120:
+            return f"About {remaining // 60} minute(s) remaining. Begin wrapping up."
+        else:
+            return f"{remaining // 60} minutes remaining ({elapsed}s elapsed of {total}s total)."
 
     @function_tool()
     async def end_session(

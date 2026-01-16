@@ -2,9 +2,95 @@
 
 from typing import Dict, Any, Optional
 from livekit.plugins import silero, openai, sarvam
+from core.session.checkpoints import SessionTimingConfig, Checkpoint
 
-# Session duration
-MAX_SESSION_DURATION = 600  # 10 minutes
+# =============================================================================
+# SESSION TIMING CONFIGURATIONS
+# =============================================================================
+
+# Practice session: 5 minutes total
+PRACTICE_TIMING_CONFIG = SessionTimingConfig(
+    max_duration=300,  # 5 minutes
+    checkpoints=[
+        Checkpoint(
+            time=180,  # 3 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "3 minutes elapsed. You have 2 minutes remaining in this practice session. "
+                "Continue naturally but be mindful of time."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=270,  # 4.5 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "30 seconds remaining. Wrap up the current discussion and "
+                "prepare to end the session."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=300,  # 5 minutes - session end
+            frontend_event=True,
+            ai_instruction=None,
+            is_final=True
+        ),
+    ]
+)
+
+# Mock interview: 10 minutes total
+MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
+    max_duration=600,  # 10 minutes
+    checkpoints=[
+        Checkpoint(
+            time=300,  # 5 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "You are halfway through the interview (5 minutes elapsed). "
+                "Ensure you're making good progress through the key questions."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=480,  # 8 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "Only 2 minutes remaining. Begin wrapping up the current topic "
+                "and prepare to conclude the interview professionally."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=540,  # 9 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "1 minute remaining. Conclude your current question and "
+                "prepare your closing remarks."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=600,  # 10 minutes - session end
+            frontend_event=True,
+            ai_instruction=None,
+            is_final=True
+        ),
+    ]
+)
+
+
+def get_timing_config(mock_interview: bool = False) -> SessionTimingConfig:
+    """
+    Get the timing configuration based on interview mode.
+
+    Args:
+        mock_interview: True for mock interview, False for practice session
+
+    Returns:
+        SessionTimingConfig for the session type
+    """
+    return MOCK_INTERVIEW_TIMING_CONFIG if mock_interview else PRACTICE_TIMING_CONFIG
 
 
 def get_model_config(voice: Optional[str] = None) -> Dict[str, Any]:

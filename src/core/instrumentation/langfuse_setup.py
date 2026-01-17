@@ -1,5 +1,6 @@
 """Langfuse observability setup using OpenTelemetry."""
 
+from agents.interview_agent.context import InterviewAgentContext
 from agents.interview_preparer.context import InterviewContext
 from agents.english_tutor.context import EnglishTutorContext
 from agents.speak_with_ai.context import SpeakWithAIContext
@@ -63,13 +64,13 @@ async def flush_traces():
 
 def setup_langfuse_for_session(
     ctx: JobContext,
-    context: EnglishTutorContext | InterviewContext | SpeakWithAIContext
+    context: EnglishTutorContext | InterviewContext | SpeakWithAIContext | InterviewAgentContext
 ) -> None:
     """
     Extract user information from context and setup Langfuse tracing.
     Args:
         ctx: Job context from LiveKit
-        context: Either EnglishTutorContext, InterviewContext, or SpeakWithAIContext instance
+        context: Either EnglishTutorContext, InterviewContext, SpeakWithAIContext or InterviewAgentContext instance
     """
     if isinstance(context, EnglishTutorContext):
         user_email = context.email
@@ -86,6 +87,11 @@ def setup_langfuse_for_session(
         user_name = context.student_name
         agent_type = "speak_with_ai"
         trace_prefix = "Speak-AI"
+    elif isinstance(context, InterviewAgentContext):
+        user_email = context.email
+        user_name = context.student_name
+        agent_type = "interview_agent"
+        trace_prefix = "Int-Agent"
     else:
         logger.warning(f"Unknown context type: {type(context)}")
         user_email = None
@@ -120,4 +126,5 @@ def setup_langfuse_for_session(
         logger.info("Langfuse tracing configured successfully")
     else:
         logger.warning("Langfuse tracing not configured")
+
 

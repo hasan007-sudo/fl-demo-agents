@@ -9,12 +9,6 @@ from livekit.agents import (
     metrics,
 )
 from livekit.plugins import noise_cancellation
-
-try:
-    from ...core.session.voice_manager import VoiceManager
-except ImportError:
-    from core.session.voice_manager import VoiceManager
-
 from .agent import InterviewAgent
 from .context import InterviewAgentContext
 from .prompt_builder import InterviewPromptBuilder

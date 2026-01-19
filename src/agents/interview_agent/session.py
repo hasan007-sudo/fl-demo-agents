@@ -10,6 +10,7 @@ from livekit.agents import (
     metrics,
 )
 from livekit.plugins import noise_cancellation
+from livekit.plugins import liveavatar
 from .agent import InterviewAgent
 from .context import InterviewAgentContext
 from .prompt_builder import InterviewPromptBuilder
@@ -18,6 +19,7 @@ from .config import get_model_config
 logger = logging.getLogger("agent")
 
 ENABLE_EVALUATION = os.getenv("ENABLE_DEEPEVAL", "true").lower() == "true"
+LIVEAVATAR_AVATAR_ID = os.getenv("LIVEAVATAR_AVATAR_ID")
 
 
 async def create_session(ctx: JobContext, context: InterviewAgentContext):
@@ -95,11 +97,17 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
                     verbose=True,
                 )
 
-                result, transcript, test_case = evaluator.evaluate_session(
+                eval_result = evaluator.evaluate_session(
                     chat_items=chat_items,
                     session_id=ctx.room.name,
                     context_data=context_data,
                 )
+
+                if eval_result is None:
+                    logger.warning("Evaluation skipped: no conversation turns found")
+                    return
+
+                result, transcript, test_case = eval_result
 
                 logger.info(
                     f"DeepEval evaluation complete: "
@@ -123,6 +131,16 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
                 logger.error(f"DeepEval evaluation failed: {e}", exc_info=True)
 
         ctx.add_shutdown_callback(run_evaluation)
+
+    # Create and start LiveAvatar session if configured
+    avatar = None
+    if LIVEAVATAR_AVATAR_ID:
+        logger.info(f"Creating LiveAvatar session with avatar: {LIVEAVATAR_AVATAR_ID}")
+        avatar = liveavatar.AvatarSession(avatar_id=LIVEAVATAR_AVATAR_ID)
+        await avatar.start(session, room=ctx.room)
+        logger.info("LiveAvatar session started")
+    else:
+        logger.info("LiveAvatar not configured, skipping avatar integration")
 
     logger.info("Starting session with InterviewAgent")
     await session.start(

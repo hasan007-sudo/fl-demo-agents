@@ -52,7 +52,7 @@ class InterviewAgentEvaluator(BaseEvaluator):
         chat_items: List[Any],
         session_id: str,
         context_data: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[EvaluationResult, SessionTranscript, ConversationalTestCase]:
+    ) -> Optional[Tuple[EvaluationResult, SessionTranscript, ConversationalTestCase]]:
         """
         Evaluate a session from chat history.
 
@@ -62,7 +62,7 @@ class InterviewAgentEvaluator(BaseEvaluator):
             context_data: Additional context (student_name, questions, mock_interview, etc.)
 
         Returns:
-            Tuple of (EvaluationResult, SessionTranscript, ConversationalTestCase)
+            Tuple of (EvaluationResult, SessionTranscript, ConversationalTestCase) or None if no turns
         """
         context = context_data or {}
         mock_interview = context.get("mock_interview", False)
@@ -73,6 +73,11 @@ class InterviewAgentEvaluator(BaseEvaluator):
             agent_type="interview_agent",
             context_data=context_data,
         )
+
+        # Check if transcript has any messages before building test case
+        if not transcript.conversation_turns:
+            logger.warning(f"No conversation turns in transcript for session {session_id}, skipping evaluation")
+            return None
 
         chatbot_role = get_role_for_mode(mock_interview)
 

@@ -77,14 +77,49 @@ class InterviewAgentContext(BaseContext):
                 return q
         return None
 
+    def set_current_question(self, identifier: str) -> Optional[Question]:
+        """
+        Set the current question being discussed.
+
+        Args:
+            identifier: The question identifier to set as current
+
+        Returns:
+            The Question object if found, None otherwise
+        """
+        question = self.get_question_by_id(identifier)
+        if question:
+            self.current_question_id = identifier
+            return question
+        return None
+
     def mark_question_discussed(self, identifier: str) -> bool:
-        """Mark a question as discussed."""
+        """Mark a question as discussed and clear current question."""
         if identifier not in self.questions_discussed:
             question = self.get_question_by_id(identifier)
             if question:
                 self.questions_discussed.append(identifier)
+                # Clear current question if it matches
+                if self.current_question_id == identifier:
+                    self.current_question_id = None
                 return True
         return False
+
+    def get_questions_for_frontend(self) -> list:
+        """
+        Get questions list formatted for frontend (without hints).
+
+        Returns:
+            List of question dicts with id, text, description
+        """
+        return [
+            {
+                "id": q.identifier,
+                "text": q.text,
+                "description": q.description,
+            }
+            for q in self.questions
+        ]
 
     def get_undiscussed_questions(self) -> List[Question]:
         """Get list of questions not yet discussed."""

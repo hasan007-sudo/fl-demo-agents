@@ -99,25 +99,49 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                 for q in self._context.questions:
                     logger.debug(f"  - {q.identifier}: {q.text[:50]}...")
 
+                # Emit questions_list event to frontend
+                await self._publish_session_event(
+                    event_type="questions_list",
+                    status="ready",
+                    metadata={
+                        "questions": self._context.get_questions_for_frontend(),
+                        "total_count": len(self._context.questions),
+                    }
+                )
+
             mode = 'Mock Interview' if self._context.mock_interview else 'Practice'
             logger.info(f"Interview mode: {mode}, Duration: {self._timing_config.max_duration}s")
 
         # Initialize timing (starts checkpoint monitoring)
         self._init_timing()
 
+        # Get first question identifier for initial prompt
+        first_question_id = None
+        if self._context and self._context.questions:
+            first_question_id = self._context.questions[0].identifier
+
         # Different greeting based on mode
         duration_mins = self._timing_config.max_duration // 60
         if self._context and self._context.mock_interview:
             instructions = (
-                f"Greet the candidate professionally and begin the mock interview. "
-                f"Introduce yourself as the interviewer and set a formal tone. "
-                f"This is a {duration_mins}-minute interview session."
+                f"Greet the candidate professionally and introduce yourself as the interviewer. "
+                f"This is a {duration_mins}-minute mock interview session. "
             )
+            if first_question_id:
+                instructions += (
+                    f"After the greeting, call start_question(\"{first_question_id}\") "
+                    f"and ask ONLY that first question. Do not ask multiple questions at once."
+                )
         else:
             instructions = (
-                f"Greet the candidate warmly and begin the interview practice session. "
-                f"This is a {duration_mins}-minute practice session."
+                f"Greet the candidate warmly in their comfortable language. Generate text in that language"
+                f"This is a {duration_mins}-minute practice session. "
             )
+            if first_question_id:
+                instructions += (
+                    f"After the greeting, call start_question(\"{first_question_id}\") "
+                    f"and ask ONLY that first question. Ask one question at a time."
+                )
 
         await self.session.generate_reply(instructions=instructions)
 
@@ -141,6 +165,53 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
         """Validate the context."""
         return context is not None
 
+    def _get_question_index(self, identifier: str) -> int:
+        """Get the index of a question by its identifier."""
+        if not self._context:
+            return -1
+        for i, q in enumerate(self._context.questions):
+            if q.identifier == identifier:
+                return i
+        return -1
+
+    @function_tool()
+    async def start_question(
+        self,
+        context: RunContext[InterviewAgentContext],
+        identifier: str
+    ) -> str:
+        """
+        Start discussing a question. Call this BEFORE asking any question.
+
+        This sets the question as currently being discussed and notifies the frontend.
+        You MUST call this before asking each question from the list.
+
+        Args:
+            identifier: The unique identifier of the question to start
+
+        Returns:
+            The question text and description to ask, or error message if not found
+        """
+        question = context.userdata.set_current_question(identifier)
+        if question:
+            question_index = self._get_question_index(identifier)
+            logger.info(f"Starting question: {identifier} - {question.text[:50]}...")
+
+            # Emit question_started event to frontend
+            await self._publish_session_event(
+                event_type="question_started",
+                status="in_progress",
+                metadata={
+                    "question_id": identifier,
+                    "question_index": question_index,
+                }
+            )
+
+            return f"Question: {question.text}\nContext: {question.description}"
+        else:
+            logger.warning(f"Question not found: {identifier}")
+            return f"Question with identifier '{identifier}' not found."
+
     @function_tool()
     async def record_question_discussed(
         self,
@@ -160,36 +231,50 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             True if question was recorded successfully, False if already recorded
                 or question not found
         """
+        question_index = self._get_question_index(identifier)
         result = context.userdata.mark_question_discussed(identifier)
+
         if result:
             question = context.userdata.get_question_by_id(identifier)
+            remaining_count = len(context.userdata.get_undiscussed_questions())
             logger.info(f"Question recorded as discussed: {identifier} - {question.text[:50] if question else 'N/A'}...")
+
+            # Emit question_completed event to frontend
+            await self._publish_session_event(
+                event_type="question_completed",
+                status="completed",
+                metadata={
+                    "question_id": identifier,
+                    "question_index": question_index,
+                    "remaining_count": remaining_count,
+                }
+            )
         else:
             logger.info(f"Question already discussed or not found: {identifier}")
         return result
 
-    @function_tool()
-    async def record_topic_discussed(
-        self,
-        context: RunContext[InterviewAgentContext],
-        topic: str
-    ) -> bool:
-        """
-        Record a general topic that was discussed during the interview.
+    # @function_tool()
+    # async def record_topic_discussed(
+    #     self,
+    #     context: RunContext[InterviewAgentContext],
+    #     topic: str
+    # ) -> bool:
+    #     """
+    #     Record a general topic that was discussed during the interview.
 
-        Use this when the conversation explores a topic beyond the provided
-        questions, to help track what was covered.
+    #     Use this when the conversation explores a topic beyond the provided
+    #     questions, to help track what was covered.
 
-        Args:
-            topic: Brief description of the topic (e.g., "career goals",
-                   "technical skills", "work experience")
+    #     Args:
+    #         topic: Brief description of the topic (e.g., "career goals",
+    #                "technical skills", "work experience")
 
-        Returns:
-            True if topic was recorded successfully
-        """
-        context.userdata.add_topic(topic)
-        logger.info(f"Topic recorded: {topic}")
-        return True
+    #     Returns:
+    #         True if topic was recorded successfully
+    #     """
+    #     context.userdata.add_topic(topic)
+    #     logger.info(f"Topic recorded: {topic}")
+    #     return True
 
     @function_tool()
     async def get_remaining_questions(

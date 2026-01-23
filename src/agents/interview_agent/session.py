@@ -10,7 +10,7 @@ from livekit.agents import (
     metrics,
 )
 from livekit.plugins import noise_cancellation
-from livekit.plugins import liveavatar
+from livekit.plugins import simli
 from .agent import InterviewAgent
 from .context import InterviewAgentContext
 from .prompt_builder import InterviewPromptBuilder
@@ -19,7 +19,8 @@ from .config import get_model_config
 logger = logging.getLogger("agent")
 
 ENABLE_EVALUATION = os.getenv("ENABLE_DEEPEVAL", "true").lower() == "true"
-LIVEAVATAR_AVATAR_ID = os.getenv("LIVEAVATAR_AVATAR_ID")
+SIMLI_API_KEY = os.getenv("SIMLI_API_KEY")
+SIMLI_FACE_ID = os.getenv("SIMLI_FACE_ID")
 
 
 async def create_session(ctx: JobContext, context: InterviewAgentContext):
@@ -132,15 +133,20 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
 
         ctx.add_shutdown_callback(run_evaluation)
 
-    # Create and start LiveAvatar session if configured
+    # Create and start Simli avatar session if configured
     avatar = None
-    if LIVEAVATAR_AVATAR_ID:
-        logger.info(f"Creating LiveAvatar session with avatar: {LIVEAVATAR_AVATAR_ID}")
-        avatar = liveavatar.AvatarSession(avatar_id=LIVEAVATAR_AVATAR_ID)
+    if SIMLI_API_KEY and SIMLI_FACE_ID:
+        logger.info(f"Creating Simli avatar session with face: {SIMLI_FACE_ID}")
+        avatar = simli.AvatarSession(
+            simli_config=simli.SimliConfig(
+                api_key=SIMLI_API_KEY,
+                face_id=SIMLI_FACE_ID,
+            ),
+        )
         await avatar.start(session, room=ctx.room)
-        logger.info("LiveAvatar session started")
+        logger.info("Simli avatar session started")
     else:
-        logger.info("LiveAvatar not configured, skipping avatar integration")
+        logger.info("Simli avatar not configured, skipping avatar integration")
 
     logger.info("Starting session with InterviewAgent")
     await session.start(

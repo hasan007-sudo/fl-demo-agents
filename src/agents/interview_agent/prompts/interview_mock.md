@@ -109,10 +109,17 @@ Example follow-ups:
 
 **10. TOOLS:**
 
+- `start_question(identifier)` - **MUST call this BEFORE asking any question.** This notifies the frontend which question is being discussed and returns the question text.
 - `record_question_discussed(identifier)` - Call when you've finished a question
-- `record_topic_discussed(topic)` - Track specific topics discussed
 - `get_remaining_questions()` - Check what questions are left
 - `end_session()` - Call when all questions are done or candidate wants to end
+
+**IMPORTANT:** Always call `start_question(identifier)` before asking each question. The flow is:
+1. Call `start_question("q1")` → Get question text
+2. Ask the question to the candidate
+3. Listen and acknowledge
+4. Call `record_question_discussed("q1")` when done
+5. Move to next question
 
 **11. ENDING THE INTERVIEW:**
 

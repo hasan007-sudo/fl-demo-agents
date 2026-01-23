@@ -15,7 +15,7 @@ source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
     { name = "langfuse" },
-    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "inworld", "openai", "sarvam", "silero", "turn-detector"] },
+    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "inworld", "openai", "sarvam", "silero", "simli", "turn-detector"] },
     { name = "livekit-plugins-liveavatar" },
     { name = "livekit-plugins-noise-cancellation" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -34,7 +34,7 @@ dev = [
 requires-dist = [
     { name = "deepeval", specifier = ">=2.0.0" },
     { name = "langfuse", specifier = ">=2.0" },
-    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "inworld", "liveavatar", "openai", "sarvam", "silero", "turn-detector"], specifier = "~=1.3.6" },
+    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "inworld", "liveavatar", "openai", "sarvam", "silero", "simli", "turn-detector"], specifier = "~=1.3.6" },
     { name = "livekit-plugins-liveavatar", specifier = ">=1.3.9" },
     { name = "livekit-plugins-noise-cancellation", specifier = "~=0.2.5" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -1264,6 +1264,9 @@ sarvam = [
 silero = [
     { name = "livekit-plugins-silero" },
 ]
+simli = [
+    { name = "livekit-plugins-simli" },
+]
 turn-detector = [
     { name = "livekit-plugins-turn-detector" },
 ]
@@ -1432,6 +1435,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/70/0a/7772134ecf88fe52d7aae1540f50d894071fb50e84aca03d3c8791d35b59/livekit_plugins_silero-1.3.9.tar.gz", hash = "sha256:44c3fb7829f7b5e2b37b1021556a0de6b8a1f3967f51af5aa0d3edde672b8811", size = 1955596, upload-time = "2025-12-19T06:27:06.023Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/51/d335cc577c034e4bd1d3b9a39dd3d7501b6388e361e445ed753352ffcd15/livekit_plugins_silero-1.3.9-py3-none-any.whl", hash = "sha256:453b4084da27c97a500388854382c0bdba6dbd3be3f5e24fc3a8b0bf2b25f9b4", size = 3903688, upload-time = "2025-12-19T06:27:04.063Z" },
+]
+
+[[package]]
+name = "livekit-plugins-simli"
+version = "1.3.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/cc/2e0fba7183ce97a9b28d8b8f753830d85b501108e6ec85893fe9cb19d8cf/livekit_plugins_simli-1.3.9.tar.gz", hash = "sha256:5db792fa1d907a485a36ecd71fc0daaf1afb0b04266f525a38e0f1c7b04f2f65", size = 4803, upload-time = "2025-12-19T06:27:08.918Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/14/13627d83d79a9196b00c28d0a7e5c1bf3d17db7661e74a578ecba9bc132d/livekit_plugins_simli-1.3.9-py3-none-any.whl", hash = "sha256:a3538c9fb6e0d114540ab71facdcdbd2c54f0a82d59991e128f11915691ee16d", size = 4879, upload-time = "2025-12-19T06:27:07.642Z" },
 ]
 
 [[package]]

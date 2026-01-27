@@ -2,12 +2,13 @@
 DeepEval metrics configuration for Interview agent.
 """
 
-from typing import List
+from typing import List, Union
 from deepeval.metrics import (
     RoleAdherenceMetric,
     KnowledgeRetentionMetric,
     ConversationCompletenessMetric,
 )
+from ..context import InterviewMode
 
 MOCK_INTERVIEW_ROLE = """
 You are a professional interviewer conducting a realistic mock interview.
@@ -39,6 +40,19 @@ You must:
 - Keep responses concise - the student should speak more than you
 """
 
+DIAGNOSTIC_INTERVIEW_ROLE = """
+You are a Diagnostic Practice Coach helping students practice specific communication activities.
+Your job is to guide them through the activity with real-time feedback and support.
+
+You must:
+- Guide the student through the diagnostic activity
+- Be warm, encouraging, and supportive
+- Provide real-time coaching as they practice
+- Remember the student's name and use it naturally
+- Help them build confidence and improve their responses
+- Focus on one activity at a time
+"""
+
 
 def get_conversation_metrics(
     role_threshold: float = 0.7,
@@ -66,6 +80,25 @@ def get_conversation_metrics(
     ]
 
 
-def get_role_for_mode(mock_interview: bool) -> str:
-    """Get the appropriate role description based on interview mode."""
-    return MOCK_INTERVIEW_ROLE if mock_interview else PRACTICE_INTERVIEW_ROLE
+def get_role_for_mode(mode: Union[InterviewMode, str, bool]) -> str:
+    """
+    Get the appropriate role description based on interview mode.
+
+    Args:
+        mode: InterviewMode enum, string mode value, or bool (for backward compatibility)
+    """
+    # Backward compatibility: convert bool to InterviewMode
+    if isinstance(mode, bool):
+        mode = InterviewMode.MOCK if mode else InterviewMode.PRACTICE
+    elif isinstance(mode, str):
+        try:
+            mode = InterviewMode(mode.lower())
+        except ValueError:
+            mode = InterviewMode.PRACTICE
+
+    if mode == InterviewMode.MOCK:
+        return MOCK_INTERVIEW_ROLE
+    elif mode == InterviewMode.DIAGNOSTIC:
+        return DIAGNOSTIC_INTERVIEW_ROLE
+    else:
+        return PRACTICE_INTERVIEW_ROLE

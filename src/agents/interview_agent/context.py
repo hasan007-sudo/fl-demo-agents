@@ -6,7 +6,15 @@ Tracks questions from room metadata and discussion state.
 
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
+from enum import Enum
 from core.context.base import BaseContext
+
+
+class InterviewMode(str, Enum):
+    """Interview session modes."""
+    MOCK = "mock"           # Realistic mock interview, no feedback
+    PRACTICE = "practice"   # Practice with coaching and feedback
+    DIAGNOSTIC = "diagnostic"  # Diagnostic mode with real-time feedback and hints
 
 
 @dataclass
@@ -41,8 +49,8 @@ class InterviewAgentContext(BaseContext):
     gender_preference: Optional[str] = None
     prompt: Optional[str] = None  # Main instructions from room metadata
 
-    # Interview mode: True = realistic mock interview, False = practice with feedback
-    mock_interview: bool = False
+    # Interview mode: mock, practice, or diagnostic
+    mode: InterviewMode = InterviewMode.PRACTICE
 
     # Language preference for practice sessions (not used in mock interviews)
     comfortable_language: Optional[str] = None
@@ -160,6 +168,27 @@ class InterviewAgentContext(BaseContext):
             )
         return "\n".join(lines)
 
+    def get_current_question(self) -> Optional[Question]:
+        """Get the currently active question."""
+        if self.current_question_id:
+            return self.get_question_by_id(self.current_question_id)
+        return None
+
+    @classmethod
+    def _parse_mode(cls, nested_context: Dict[str, Any]) -> InterviewMode:
+        """
+        Parse interview mode from metadata.
+        """
+        mode_str = nested_context.get("mode")
+        if mode_str:
+            try:
+                return InterviewMode(mode_str.lower())
+            except ValueError:
+                pass
+
+        # Default to practice mode
+        return InterviewMode.PRACTICE
+
     @classmethod
     def from_metadata(cls, metadata: Dict[str, Any]) -> 'InterviewAgentContext':
         """Parse InterviewAgentContext from room metadata."""
@@ -181,7 +210,7 @@ class InterviewAgentContext(BaseContext):
             email=nested_context.get("email"),
             gender_preference=nested_context.get("gender_preference") or nested_context.get("genderPreference"),
             prompt=nested_context.get("prompt"),
-            mock_interview=nested_context.get("mock_interview") or nested_context.get("mockInterview") or False,
+            mode=cls._parse_mode(nested_context),
             comfortable_language=nested_context.get("comfortable_language") or nested_context.get("comfortableLanguage"),
             questions=questions,
         )

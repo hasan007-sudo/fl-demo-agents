@@ -3,6 +3,7 @@
 from typing import Dict, Any, Optional
 from livekit.plugins import silero, openai, sarvam
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
+from .context import InterviewMode
 
 # =============================================================================
 # SESSION TIMING CONFIGURATIONS
@@ -79,18 +80,44 @@ MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
     ]
 )
 
+# Diagnostic mode: 5 minutes per activity (same as practice for now)
+DIAGNOSTIC_TIMING_CONFIG = SessionTimingConfig(
+    max_duration=300,  # 5 minutes
+    checkpoints=[
+        Checkpoint(
+            time=270,  # 4.5 minutes
+            frontend_event=True,
+            ai_instruction=(
+                "30 seconds remaining. Let's wrap up this activity."
+            ),
+            is_final=False
+        ),
+        Checkpoint(
+            time=300,  # 5 minutes - session end
+            frontend_event=True,
+            ai_instruction=None,
+            is_final=True
+        ),
+    ]
+)
 
-def get_timing_config(mock_interview: bool = False) -> SessionTimingConfig:
+
+def get_timing_config(mode: InterviewMode = InterviewMode.PRACTICE) -> SessionTimingConfig:
     """
     Get the timing configuration based on interview mode.
 
     Args:
-        mock_interview: True for mock interview, False for practice session
+        mode: InterviewMode enum
 
     Returns:
         SessionTimingConfig for the session type
     """
-    return MOCK_INTERVIEW_TIMING_CONFIG if mock_interview else PRACTICE_TIMING_CONFIG
+    if mode == InterviewMode.MOCK:
+        return MOCK_INTERVIEW_TIMING_CONFIG
+    elif mode == InterviewMode.DIAGNOSTIC:
+        return DIAGNOSTIC_TIMING_CONFIG
+    else:
+        return PRACTICE_TIMING_CONFIG
 
 
 def get_model_config(voice: Optional[str] = None) -> Dict[str, Any]:

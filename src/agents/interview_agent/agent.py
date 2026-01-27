@@ -2,6 +2,7 @@
 
 import logging
 from typing import Optional
+
 from livekit.agents import AgentSession
 from livekit.agents.llm import function_tool
 from livekit.agents.voice import RunContext
@@ -11,7 +12,7 @@ from core.agents.mixins.shutdown import ShutdownMixin
 from core.agents.mixins.timing import TimingMixin
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from core.prompts.base import BasePromptBuilder
-from .context import InterviewAgentContext
+from .context import InterviewAgentContext, InterviewMode
 from .prompt_builder import InterviewPromptBuilder
 from .config import get_timing_config
 
@@ -40,11 +41,11 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             **kwargs
         )
         # Store timing config based on mode
-        is_mock = context.mock_interview if context else False
-        self._timing_config = get_timing_config(is_mock)
+        mode = context.mode if context else InterviewMode.PRACTICE
+        self._timing_config = get_timing_config(mode)
 
         logger.info(
-            f"InterviewAgent initialized - Mode: {'Mock Interview' if is_mock else 'Practice'}, "
+            f"InterviewAgent initialized - Mode: {mode.value}, "
             f"Duration: {self._timing_config.max_duration}s, "
             f"Checkpoints: {len(self._timing_config.checkpoints)}"
         )
@@ -56,14 +57,22 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
     def get_goodbye_instruction(self) -> str:
         """Get the instruction for generating goodbye message."""
         student_name = self._context.student_name if self._context else "candidate"
+        mode = self._context.mode if self._context else InterviewMode.PRACTICE
 
-        if self._context and self._context.mock_interview:
+        if mode == InterviewMode.MOCK:
             # Mock interview: professional, no feedback
             return (
                 f"The mock interview is now complete. "
                 f"Thank {student_name} professionally for their time. "
                 f"Do NOT provide any feedback or evaluation. "
                 f"Simply inform them the interview has concluded and wish them well."
+            )
+        elif mode == InterviewMode.DIAGNOSTIC:
+            # Diagnostic mode: encouraging with activity summary
+            return (
+                f"The diagnostic activity is now complete. "
+                f"Thank {student_name} warmly for their participation. "
+                f"Encourage them to review the feedback provided and keep practicing."
             )
         else:
             # Practice mode: warm, encouraging with summary
@@ -109,8 +118,7 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     }
                 )
 
-            mode = 'Mock Interview' if self._context.mock_interview else 'Practice'
-            logger.info(f"Interview mode: {mode}, Duration: {self._timing_config.max_duration}s")
+            logger.info(f"Interview mode: {self._context.mode.value}, Duration: {self._timing_config.max_duration}s")
 
         # Initialize timing (starts checkpoint monitoring)
         self._init_timing()
@@ -122,7 +130,9 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
 
         # Different greeting based on mode
         duration_mins = self._timing_config.max_duration // 60
-        if self._context and self._context.mock_interview:
+        mode = self._context.mode if self._context else InterviewMode.PRACTICE
+
+        if mode == InterviewMode.MOCK:
             instructions = (
                 f"Greet the candidate professionally and introduce yourself as the interviewer. "
                 f"This is a {duration_mins}-minute mock interview session. "
@@ -132,9 +142,20 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     f"After the greeting, call start_question(\"{first_question_id}\") "
                     f"and ask ONLY that first question. Do not ask multiple questions at once."
                 )
-        else:
+        elif mode == InterviewMode.DIAGNOSTIC:
             instructions = (
-                f"Greet the candidate warmly in their comfortable language. Generate text in that language"
+                f"Greet the candidate warmly. This is a {duration_mins}-minute diagnostic practice activity. "
+                f"Your role is to help them practice and improve. "
+            )
+            if first_question_id:
+                instructions += (
+                    f"Call start_question(\"{first_question_id}\") and guide them through this activity. "
+                    f"Be encouraging and supportive."
+                )
+        else:
+            # Practice mode
+            instructions = (
+                f"Greet the candidate warmly in their comfortable language. Generate text in that language. "
                 f"This is a {duration_mins}-minute practice session. "
             )
             if first_question_id:

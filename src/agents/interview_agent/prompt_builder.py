@@ -7,7 +7,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from core.prompts.base import BasePromptBuilder
 from core.context.base import BaseContext
-from .context import InterviewAgentContext
+from .context import InterviewAgentContext, InterviewMode
 
 import logging
 logger = logging.getLogger(__name__)
@@ -55,11 +55,15 @@ class InterviewPromptBuilder(BasePromptBuilder):
 
     def build(self, context: BaseContext) -> str:
         """Build prompt using appropriate interview template based on mode."""
-        # Select template based on mock_interview flag
-        if context and isinstance(context, InterviewAgentContext) and context.mock_interview:
-            template_name = "interview_mock.md"
-        else:
-            template_name = "interview_practice.md"
+        # Select template based on mode
+        template_name = "interview_practice.md"  # default
+        if context and isinstance(context, InterviewAgentContext):
+            if context.mode == InterviewMode.MOCK:
+                template_name = "interview_mock.md"
+            elif context.mode == InterviewMode.DIAGNOSTIC:
+                template_name = "interview_diagnostic.md"
+            else:
+                template_name = "interview_practice.md"
         logger.info(f"Building prompt using template: {template_name}")
 
         context_dict = {}

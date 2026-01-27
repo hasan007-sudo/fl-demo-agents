@@ -59,13 +59,13 @@ class InterviewAgentEvaluator(BaseEvaluator):
         Args:
             chat_items: Chat messages from AgentSession.chat_ctx.items
             session_id: Session identifier
-            context_data: Additional context (student_name, questions, mock_interview, etc.)
+            context_data: Additional context (student_name, questions, mode, etc.)
 
         Returns:
             Tuple of (EvaluationResult, SessionTranscript, ConversationalTestCase) or None if no turns
         """
         context = context_data or {}
-        mock_interview = context.get("mock_interview", False)
+        mode = context.get("mode", "practice")
 
         transcript = TranscriptBuilder.from_chat_history(
             chat_items=chat_items,
@@ -79,7 +79,7 @@ class InterviewAgentEvaluator(BaseEvaluator):
             logger.warning(f"No conversation turns in transcript for session {session_id}, skipping evaluation")
             return None
 
-        chatbot_role = get_role_for_mode(mock_interview)
+        chatbot_role = get_role_for_mode(mode)
 
         test_case = TranscriptBuilder.build_test_case(
             transcript=transcript,
@@ -106,8 +106,13 @@ class InterviewAgentEvaluator(BaseEvaluator):
 
         # Determine interview mode from metadata
         metadata = test_case.additional_metadata or {}
-        mock_interview = transcript.metadata.get("mock_interview", False)
-        mode_label = "Mock Interview" if mock_interview else "Practice Interview"
+        mode = transcript.metadata.get("mode", "practice")
+        mode_labels = {
+            "mock": "Mock Interview",
+            "practice": "Practice Interview",
+            "diagnostic": "Diagnostic Activity",
+        }
+        mode_label = mode_labels.get(mode, "Practice Interview")
 
         # Build scenario from context
         questions_text = ", ".join(

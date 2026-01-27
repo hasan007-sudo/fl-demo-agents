@@ -80,7 +80,7 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
                 context_data = {
                     "student_name": context.student_name,
                     "email": context.email,
-                    "mock_interview": context.mock_interview,
+                    "mode": context.mode.value,
                     "questions": [
                         {"identifier": q.identifier, "text": q.text, "hint": q.hint}
                         for q in context.questions
@@ -88,7 +88,7 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
                     "questions_discussed": context.questions_discussed,
                     "topics_discussed": context.topics_discussed,
                     "metadata": {
-                        "mock_interview": context.mock_interview,
+                        "mode": context.mode.value,
                         "comfortable_language": context.comfortable_language,
                     },
                 }

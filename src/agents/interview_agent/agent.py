@@ -142,16 +142,28 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     f"After the greeting, call start_question(\"{first_question_id}\") "
                     f"and ask ONLY that first question. Do not ask multiple questions at once."
                 )
+            await self.session.generate_reply(instructions=instructions)
+
         elif mode == InterviewMode.DIAGNOSTIC:
-            instructions = (
-                f"Greet the candidate warmly. This is a {duration_mins}-minute diagnostic practice activity. "
-                f"Your role is to help them practice and improve. "
-            )
+            # Diagnostic mode: Don't speak, just start the question directly
             if first_question_id:
-                instructions += (
-                    f"Call start_question(\"{first_question_id}\") and guide them through this activity. "
-                    f"Be encouraging and supportive."
-                )
+                # Directly call start_question and emit the event without generating speech
+                question = self._context.set_current_question(first_question_id)
+                if question:
+                    question_index = self._get_question_index(first_question_id)
+                    logger.info(f"Diagnostic mode: Starting question directly: {first_question_id}")
+
+                    # Emit question_started event to frontend
+                    await self._publish_session_event(
+                        event_type="question_started",
+                        status="in_progress",
+                        metadata={
+                            "question_id": first_question_id,
+                            "question_index": question_index,
+                        }
+                    )
+            # No generate_reply for diagnostic mode - agent waits for user to speak first
+
         else:
             # Practice mode
             instructions = (
@@ -163,8 +175,7 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     f"After the greeting, call start_question(\"{first_question_id}\") "
                     f"and ask ONLY that first question. Ask one question at a time."
                 )
-
-        await self.session.generate_reply(instructions=instructions)
+            await self.session.generate_reply(instructions=instructions)
 
     async def _on_checkpoint_reached(self, checkpoint: Checkpoint, idx: int) -> None:
         """Handle regular checkpoint by sending time awareness instruction."""

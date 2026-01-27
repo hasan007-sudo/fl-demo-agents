@@ -120,23 +120,26 @@ def get_timing_config(mode: InterviewMode = InterviewMode.PRACTICE) -> SessionTi
         return PRACTICE_TIMING_CONFIG
 
 
-def get_model_config(voice: Optional[str] = None) -> Dict[str, Any]:
+def get_model_config(
+    voice: Optional[str] = None,
+    mode: InterviewMode = InterviewMode.PRACTICE
+) -> Dict[str, Any]:
     """
     Get model configuration for Interview agent.
 
     Args:
         voice: Optional voice override for TTS
+        mode: Interview mode (affects turn detection settings)
 
     Returns:
         Dictionary of model configuration
     """
-    return {
-        "vad": silero.VAD.load(),
-        "turn_detection": "vad",
+    config: Dict[str, Any] = {
         "llm": openai.LLM(model="gpt-4o-mini"),
         "stt": sarvam.STT(
             language="en-IN",
             model="saarika:v2.5",
+            high_vad_sensitivity=True,  # Faster silence detection (0.5s vs 1s)
         ),
         "tts": sarvam.TTS(
             target_language_code="en-IN",
@@ -145,3 +148,11 @@ def get_model_config(voice: Optional[str] = None) -> Dict[str, Any]:
             pace=0.9,
         ),
     }
+
+    # For diagnostic mode (push-to-talk), don't add VAD or turn_detection
+    # The session handles turn detection manually via RPC
+    if mode != InterviewMode.DIAGNOSTIC:
+        config["vad"] = silero.VAD.load()
+        config["turn_detection"] = "vad"
+
+    return config

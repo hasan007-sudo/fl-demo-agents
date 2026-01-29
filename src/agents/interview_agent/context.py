@@ -26,8 +26,17 @@ class Question:
     description: str
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Question':
-        """Create Question from dictionary."""
+    def from_dict(cls, data: Any) -> 'Question':
+        """Create Question from dictionary or string."""
+        # Handle case where data is just a string (the question text)
+        if isinstance(data, str):
+            return cls(
+                text=data,
+                hint="",
+                identifier=data[:20].replace(" ", "_").lower(),  # Generate simple identifier
+                description="",
+            )
+        # Handle dictionary format
         return cls(
             text=data.get("text", ""),
             hint=data.get("hint", ""),
@@ -65,6 +74,9 @@ class InterviewAgentContext(BaseContext):
 
     # Job context
     job_ctx: Optional[Any] = None
+
+    # Whether UI feedback is shown to user (diagnostic mode)
+    is_feedback_enabled: bool = True
 
     def __post_init__(self):
         """Initialize with default agent type."""
@@ -204,6 +216,11 @@ class InterviewAgentContext(BaseContext):
         raw_questions = nested_context.get("questions", [])
         questions = [Question.from_dict(q) for q in raw_questions]
 
+        # Parse is_feedback_enabled (default True, supports both snake_case and camelCase)
+        is_feedback_enabled = nested_context.get("is_feedback_enabled")
+        if is_feedback_enabled is None:
+            is_feedback_enabled = nested_context.get("isFeedbackEnabled", True)
+
         return cls(
             agent_type="interview_agent",
             student_name=nested_context.get("student_name") or nested_context.get("studentName"),
@@ -213,4 +230,5 @@ class InterviewAgentContext(BaseContext):
             mode=cls._parse_mode(nested_context),
             comfortable_language=nested_context.get("comfortable_language") or nested_context.get("comfortableLanguage"),
             questions=questions,
+            is_feedback_enabled=is_feedback_enabled,
         )

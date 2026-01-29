@@ -1,5 +1,6 @@
 """Interview agent configuration."""
 
+from livekit.plugins import deepgram
 from typing import Dict, Any, Optional
 from livekit.plugins import silero, openai, sarvam
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
@@ -136,10 +137,14 @@ def get_model_config(
     """
     config: Dict[str, Any] = {
         "llm": openai.LLM(model="gpt-4o-mini"),
-        "stt": sarvam.STT(
-            language="en-IN",
-            model="saarika:v2.5",
-            high_vad_sensitivity=True,  # Faster silence detection (0.5s vs 1s)
+        # "stt": sarvam.STT(
+        #     language="en-IN",
+        #     model="saarika:v2.5",
+        #     high_vad_sensitivity=True,  # Faster silence detection (0.5s vs 1s)
+        # ),
+        "stt": deepgram.STTv2(
+            model="flux-general-en",
+            eager_eot_threshold=0.4,
         ),
         "tts": sarvam.TTS(
             target_language_code="en-IN",

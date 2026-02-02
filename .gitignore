@@ -9,3 +9,6 @@ KMS
 *.egg-info
 .pytest_cache
 .ruff_cache
+.bmad
+*.claude
+docs/*

@@ -3,7 +3,7 @@
 import logging
 
 from livekit.agents import AgentSession
-from core.agents.base import BaseAgent, AgentMetadata
+from core.agents.base import BaseAgent
 from core.agents.mixins import TimingMixin, ShutdownMixin
 from core.prompts.base import BasePromptBuilder
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
@@ -19,24 +19,6 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
 
     auto_register = True
     registration_name = "interview_preparer"
-
-    @property
-    def metadata(self) -> AgentMetadata:
-        """Get metadata about this agent."""
-        return AgentMetadata(
-            name="Interview Preparer",
-            version="1.0.0",
-            description="AI interview coach for mock interview practice",
-            supported_languages=["en"],
-            capabilities=[
-                "mock_interviews",
-                "behavioral_questions",
-                "technical_interviews",
-                "interview_feedback",
-                "answer_coaching",
-                "confidence_building"
-            ]
-        )
 
     def _create_default_prompt_builder(self) -> BasePromptBuilder:
         """Create the default prompt builder for Interview Preparer."""
@@ -55,11 +37,11 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
         if checkpoint.ai_instruction:
             try:
                 logger.info(f"Interview checkpoint {idx + 1}: Sending AI instruction")
-                self.session.generate_reply(user_input=checkpoint.ai_instruction)
+                await self.session.generate_reply(instructions=checkpoint.ai_instruction)
             except Exception as e:
                 logger.warning(f"Failed to send checkpoint {idx + 1} instruction: {e}")
 
-    async def _on_session_timeout(self) -> None:
+    async def _on_session_timeout(self, checkpoint: Checkpoint, idx: int) -> None:
         """Handle session timeout by triggering graceful shutdown."""
         await self._graceful_shutdown()
 
@@ -76,8 +58,8 @@ class InterviewPreparerAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewCont
         print("🔥 INTERVIEW PREPARER: on_enter CALLED!")
 
         try:
-            self.session.generate_reply(
-                user_input="Start by greeting the candidate warmly by name if provided"
+            await self.session.generate_reply(
+                instructions="Start by greeting the candidate warmly by name if provided"
             )
 
             logger.info(

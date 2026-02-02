@@ -6,7 +6,7 @@ All field names and types remain exactly the same.
 """
 
 from typing import Optional, List, Dict, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from core.context.base import BaseContext
 
 
@@ -15,11 +15,11 @@ class EnglishTutorContext(BaseContext):
     """
     Context data for personalizing the English Tutor agent.
 
-    IMPORTANT: These fields are EXACTLY as they exist in the current system.
-    No changes to maintain frontend compatibility.
-
-    The frontend sends this via room metadata in the tutor_context field.
+    IMPORTANT: Frontend fields remain EXACTLY as they exist for compatibility.
     """
+    # =============================================================================
+    # FRONTEND CONTEXT (from room metadata)
+    # =============================================================================
     # EXACT fields from frontend EnglishTutorContext interface
     student_name: Optional[str] = None
     proficiency_level: Optional[str] = None  # ProficiencyLevel type in frontend
@@ -28,10 +28,29 @@ class EnglishTutorContext(BaseContext):
     interests: Optional[List[str]] = None  # Interest[] in frontend
     comfortable_language: Optional[str] = None  # IndianLanguage type
     tutor_styles: Optional[List[str]] = None  # NewTutorStyle[] in frontend
+    learning_goals: Optional[List[str]] = None
     correction_preference: Optional[str] = None  # CorrectionPreference type
     email: Optional[str] = None
     whatsapp: Optional[str] = None
-    # Note: learning_goals was in old context but not in the frontend interface
+
+    # =============================================================================
+    # SESSION STATE (runtime tracking for multi-agent orchestration)
+    # =============================================================================
+    # Conversation tracking
+    topics_discussed: List[str] = field(default_factory=list)
+    # conversation_start_time: Optional[float] = None
+
+    # Speaking metrics (for future analytics - not used by agents)
+    total_words_spoken: int = 0
+    user_speaking_duration: float = 0.0  # seconds
+
+    # Agent references for handoff
+    conversation_agent: Optional[Any] = None
+    feedback_agent: Optional[Any] = None
+    previous_agent: Optional[Any] = None
+
+    # Job context
+    job_ctx: Optional[Any] = None
 
     def __post_init__(self):
         """Initialize with default agent type."""
@@ -62,6 +81,41 @@ class EnglishTutorContext(BaseContext):
         if self.speaking_speed and self.speaking_speed not in valid_speeds:
             import logging
             logging.warning(f"Invalid speaking speed: {self.speaking_speed}")
+
+    def calculate_wpm(self) -> float:
+        """
+        Calculate words per minute based on speaking metrics.
+
+        Returns:
+            Words per minute, or 0.0 if no speaking duration recorded.
+        """
+        if self.user_speaking_duration > 0:
+            return (self.total_words_spoken / self.user_speaking_duration) * 60
+        return 0.0
+
+    def add_topic(self, topic: str) -> None:
+        """
+        Add a new topic to the list of discussed topics.
+
+        Args:
+            topic: Brief description of the topic.
+        """
+        if topic and topic not in self.topics_discussed:
+            self.topics_discussed.append(topic)
+
+    def summarize(self) -> str:
+        """
+        Generate a summary string for system messages.
+
+        Returns:
+            Summary of session state for AI context.
+        """
+        topics_str = ", ".join(self.topics_discussed[:3]) if self.topics_discussed else "None yet"
+        return (
+            f"Student: {self.student_name or 'Unknown'}, "
+            f"Level: {self.proficiency_level or 'Unknown'}, "
+            f"Topics: {topics_str}"
+        )
 
     @classmethod
     def from_metadata(cls, metadata: Dict[str, Any]) -> 'EnglishTutorContext':

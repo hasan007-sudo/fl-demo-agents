@@ -14,7 +14,7 @@ import importlib
 import inspect
 from pathlib import Path
 
-from .base import BaseAgent, AgentMetadata
+from .base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 class AgentRegistration:
     """Information about a registered agent."""
     agent_class: Type[BaseAgent]
-    metadata: AgentMetadata
     factory_func: Optional[Callable[..., BaseAgent]] = None
     is_default: bool = False
 
@@ -91,26 +90,8 @@ class AgentRegistry:
         if name in self._agents:
             raise ValueError(f"Agent '{name}' is already registered")
 
-        # Get metadata from agent class
-        try:
-            # Create temporary instance to get metadata
-            temp_instance = agent_class()
-            metadata = temp_instance.metadata
-        except Exception as e:
-            logger.warning(f"Could not get metadata for {name}: {e}")
-            # Create default metadata
-            metadata = AgentMetadata(
-                name=name,
-                version="1.0.0",
-                description=f"{name} agent",
-                supported_languages=["en"],
-                capabilities=[]
-            )
-
-        # Create registration
         registration = AgentRegistration(
             agent_class=agent_class,
-            metadata=metadata,
             factory_func=factory_func,
             is_default=is_default
         )

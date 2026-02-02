@@ -61,6 +61,7 @@ class SessionLifecycleManager:
 
     async def delete_room(self) -> bool:
         """Delete the current room, disconnecting all participants."""
+        api_client = None
         try:
             job_ctx = get_job_context()
             api_client = api.LiveKitAPI(
@@ -76,6 +77,10 @@ class SessionLifecycleManager:
         except Exception as e:
             logger.debug(f"{self.agent_name}: Could not delete room: {e}")
             return False
+        finally:
+            # Properly close the API client to avoid unclosed session warnings
+            if api_client is not None:
+                await api_client.aclose()
 
     def reset(self) -> None:
         """Reset lifecycle state."""

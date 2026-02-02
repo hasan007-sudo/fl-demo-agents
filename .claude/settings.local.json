@@ -18,7 +18,12 @@
       "mcp__livekit-docs__docs_search",
       "mcp__livekit-docs__get_pages",
       "mcp__livekit-docs__get_docs_overview",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "mcp__livekit-docs__get_python_agent_example",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(.venv/bin/python:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

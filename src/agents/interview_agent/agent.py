@@ -145,9 +145,9 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             await self.session.generate_reply(instructions=instructions)
 
         elif mode == InterviewMode.DIAGNOSTIC:
-            # Diagnostic mode: Don't speak, just start the question directly
+            # Diagnostic mode: Start the question and speak it to the user
             if first_question_id:
-                # Directly call start_question and emit the event without generating speech
+                # Set current question and emit the event
                 question = self._context.set_current_question(first_question_id)
                 if question:
                     question_index = self._get_question_index(first_question_id)
@@ -162,7 +162,7 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                             "question_index": question_index,
                         }
                     )
-            # No generate_reply for diagnostic mode - agent waits for user to speak first
+                    await self.session.say(question.text)
 
         else:
             # Practice mode

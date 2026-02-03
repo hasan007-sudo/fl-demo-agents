@@ -3,6 +3,7 @@
 from livekit.plugins import deepgram
 from typing import Dict, Any, Optional
 from livekit.plugins import silero, openai, sarvam
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from .context import InterviewMode
 
@@ -157,7 +158,7 @@ def get_model_config(
     # For diagnostic mode (push-to-talk), don't add VAD or turn_detection
     # The session handles turn detection manually via RPC
     if mode != InterviewMode.DIAGNOSTIC:
-        config["vad"] = silero.VAD.load()
-        config["turn_detection"] = "vad"
+        config["vad"] = silero.VAD.load()  # Keep for speech detection
+        config["turn_detection"] = MultilingualModel()  # LM-based turn detection
 
     return config

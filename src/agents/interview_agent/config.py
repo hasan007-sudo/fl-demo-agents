@@ -6,6 +6,7 @@ from livekit.plugins import silero, openai, sarvam
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from .context import InterviewMode
+from livekit.plugins import inworld
 
 # =============================================================================
 # SESSION TIMING CONFIGURATIONS
@@ -153,6 +154,7 @@ def get_model_config(
             model="bulbul:v2",
             pace=0.9,
         ),
+        # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
     }
 
     # For diagnostic mode (push-to-talk), don't add VAD or turn_detection

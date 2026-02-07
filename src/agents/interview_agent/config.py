@@ -83,25 +83,10 @@ MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
     ]
 )
 
-# Diagnostic mode: 5 minutes per activity (same as practice for now)
+# Diagnostic mode: No checkpoints - session runs until manually ended
 DIAGNOSTIC_TIMING_CONFIG = SessionTimingConfig(
-    max_duration=300,  # 5 minutes
-    checkpoints=[
-        Checkpoint(
-            time=270,  # 4.5 minutes
-            frontend_event=True,
-            ai_instruction=(
-                "30 seconds remaining. Let's wrap up this activity."
-            ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=300,  # 5 minutes - session end
-            frontend_event=True,
-            ai_instruction=None,
-            is_final=True
-        ),
-    ]
+    max_duration=300,  # 5 minutes (reference only, not enforced)
+    checkpoints=[]
 )
 
 

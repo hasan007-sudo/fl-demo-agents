@@ -192,17 +192,17 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
         await room_io.start()
         logger.info("RoomIO started for diagnostic push-to-talk mode")
 
+        # Connect to room BEFORE session.start() so on_enter() can publish events
+        await ctx.connect()
+        logger.info("Connected to room")
+
         # Start session WITHOUT room parameter - RoomIO handles it
         await session.start(agent=agent)
 
-        # Disable audio input IMMEDIATELY after session starts (before connect)
+        # Disable audio input IMMEDIATELY after session starts
         # This prevents any audio from being processed before PTT is activated
         session.input.set_audio_enabled(False)
         logger.info("Audio input disabled immediately for push-to-talk")
-
-        # Connect to room to access local_participant for RPC registration
-        await ctx.connect()
-        logger.info("Connected to room")
 
         # Register RPC methods for push-to-talk control (after connect)
         @ctx.room.local_participant.register_rpc_method("start_turn")

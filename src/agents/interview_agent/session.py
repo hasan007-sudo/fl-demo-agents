@@ -240,6 +240,21 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
             session.clear_user_turn()
             return "ok"
 
+        @ctx.room.local_participant.register_rpc_method("pause_session")
+        async def pause_session(data: rtc.RpcInvocationData):
+            """Called when user pauses the session."""
+            logger.info(f"pause_session RPC called by {data.caller_identity}")
+            session.interrupt()
+            session.input.set_audio_enabled(False)
+            return "ok"
+
+        @ctx.room.local_participant.register_rpc_method("resume_session")
+        async def resume_session(data: rtc.RpcInvocationData):
+            """Called when user resumes the session."""
+            logger.info(f"resume_session RPC called by {data.caller_identity}")
+            session.input.set_audio_enabled(True)
+            return "ok"
+
         logger.info("Push-to-talk RPC methods registered")
     else:
         # Non-diagnostic modes: normal session start with room

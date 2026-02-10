@@ -144,4 +144,9 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     register_agents()
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm, shutdown_process_timeout=100))
+    cli.run_app(WorkerOptions(
+        entrypoint_fnc=entrypoint,
+        prewarm_fnc=prewarm,
+        shutdown_process_timeout=100,
+        # agent_name="monologue-v2-agent",
+    ))

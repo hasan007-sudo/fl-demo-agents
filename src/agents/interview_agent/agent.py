@@ -1,6 +1,7 @@
 """Interview Agent for conducting interviews."""
 
 import logging
+import time
 from typing import Optional
 
 from livekit.agents import AgentSession
@@ -85,7 +86,7 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
 
     def get_session_duration(self) -> int:
         """Get the session duration in seconds."""
-        return int(time.time() - self._session_start_time)
+        return int(self._timer.elapsed_time()) if self._timer else 0
 
     def _create_default_prompt_builder(self) -> BasePromptBuilder:
         """Create the default prompt builder."""
@@ -145,24 +146,14 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             await self.session.generate_reply(instructions=instructions)
 
         elif mode == InterviewMode.DIAGNOSTIC:
-            # Diagnostic mode: Don't speak, just start the question directly
+            # Diagnostic mode: No greeting, jump straight to the question
             if first_question_id:
-                # Directly call start_question and emit the event without generating speech
-                question = self._context.set_current_question(first_question_id)
-                if question:
-                    question_index = self._get_question_index(first_question_id)
-                    logger.info(f"Diagnostic mode: Starting question directly: {first_question_id}")
-
-                    # Emit question_started event to frontend
-                    await self._publish_session_event(
-                        event_type="question_started",
-                        status="in_progress",
-                        metadata={
-                            "question_id": first_question_id,
-                            "question_index": question_index,
-                        }
+                await self.session.generate_reply(
+                    instructions=(
+                        f"Call start_question(\"{first_question_id}\") and ask ONLY that question directly. "
+                        f"Do not greet or introduce yourself - just ask the question."
                     )
-            # No generate_reply for diagnostic mode - agent waits for user to speak first
+                )
 
         else:
             # Practice mode

@@ -3,8 +3,10 @@
 from livekit.plugins import deepgram
 from typing import Dict, Any, Optional
 from livekit.plugins import silero, openai, sarvam
+from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from .context import InterviewMode
+from livekit.plugins import inworld
 
 # =============================================================================
 # SESSION TIMING CONFIGURATIONS
@@ -81,25 +83,10 @@ MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
     ]
 )
 
-# Diagnostic mode: 5 minutes per activity (same as practice for now)
+# Diagnostic mode: No checkpoints - session runs until manually ended
 DIAGNOSTIC_TIMING_CONFIG = SessionTimingConfig(
-    max_duration=300,  # 5 minutes
-    checkpoints=[
-        Checkpoint(
-            time=270,  # 4.5 minutes
-            frontend_event=True,
-            ai_instruction=(
-                "30 seconds remaining. Let's wrap up this activity."
-            ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=300,  # 5 minutes - session end
-            frontend_event=True,
-            ai_instruction=None,
-            is_final=True
-        ),
-    ]
+    max_duration=300,  # 5 minutes (reference only, not enforced)
+    checkpoints=[]
 )
 
 
@@ -152,12 +139,13 @@ def get_model_config(
             model="bulbul:v2",
             pace=0.9,
         ),
+        # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
     }
 
     # For diagnostic mode (push-to-talk), don't add VAD or turn_detection
     # The session handles turn detection manually via RPC
     if mode != InterviewMode.DIAGNOSTIC:
-        config["vad"] = silero.VAD.load()
-        config["turn_detection"] = "vad"
+        config["vad"] = silero.VAD.load()  # Keep for speech detection
+        config["turn_detection"] = MultilingualModel()  # LM-based turn detection
 
     return config

@@ -148,5 +148,6 @@ if __name__ == "__main__":
         entrypoint_fnc=entrypoint,
         prewarm_fnc=prewarm,
         shutdown_process_timeout=100,
+        num_idle_processes=3,
         # agent_name="monologue-v2-agent",
     ))

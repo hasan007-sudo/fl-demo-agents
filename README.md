@@ -1,114 +1,126 @@
-<a href="https://livekit.io/">
-  <img src="./.github/assets/livekit-mark.png" alt="LiveKit logo" width="100" height="100">
-</a>
+# Forever Learning Agents
 
-# LiveKit Agents Starter - Python
+A multi-agent voice AI platform for real-time conversational AI experiences including English tutoring, interview preparation, and general conversation practice.
 
-A complete starter project for building voice AI apps with [LiveKit Agents for Python](https://github.com/livekit/agents) and [LiveKit Cloud](https://cloud.livekit.io/).
+## Agents
 
-The starter project includes:
+| Agent | Description |
+|-------|-------------|
+| **English Tutor** | Multi-agent English conversation practice with sequential handoff: conversation partner (4 min) then feedback provider (1 min) |
+| **Interview Preparer** | AI mock interview coach with behavioral/technical/HR questions, powered by Gemini 2.5 Flash realtime audio |
+| **Interview Agent** | Structured question-guided interviews with MOCK, PRACTICE, and DIAGNOSTIC modes. Optional Simli avatar support |
+| **Speak With AI** | General question-guided conversation practice with evaluation support |
 
-- A simple voice AI assistant, ready for extension and customization
-- A voice AI pipeline with [models](https://docs.livekit.io/agents/models) from OpenAI, Cartesia, and AssemblyAI served through LiveKit Cloud
-  - Easily integrate your preferred [LLM](https://docs.livekit.io/agents/models/llm/), [STT](https://docs.livekit.io/agents/models/stt/), and [TTS](https://docs.livekit.io/agents/models/tts/) instead, or swap to a realtime model like the [OpenAI Realtime API](https://docs.livekit.io/agents/models/realtime/openai)
-- Eval suite based on the LiveKit Agents [testing & evaluation framework](https://docs.livekit.io/agents/build/testing/)
-- [LiveKit Turn Detector](https://docs.livekit.io/agents/build/turns/turn-detector/) for contextually-aware speaker detection, with multilingual support
-- [Background voice cancellation](https://docs.livekit.io/home/cloud/noise-cancellation/)
-- Integrated [metrics and logging](https://docs.livekit.io/agents/build/metrics/)
-- A Dockerfile ready for [production deployment](https://docs.livekit.io/agents/ops/deployment/)
+## Architecture
 
-This starter app is compatible with any [custom web/mobile frontend](https://docs.livekit.io/agents/start/frontend/) or [SIP-based telephony](https://docs.livekit.io/agents/start/telephony/).
+```
+src/
+├── main.py                          # Entry point, agent routing
+├── agents/                          # Agent implementations
+│   ├── english_tutor/               # Multi-agent orchestration (conversation + feedback)
+│   ├── interview_agent/             # Question-guided interviews
+│   ├── interview_preparer/          # Mock interview coach
+│   └── speak_with_ai/              # General conversation
+├── core/                            # Shared framework
+│   ├── agents/                     # Base classes, factory, registry, mixins
+│   ├── context/                    # Context management
+│   ├── evaluation/                 # DeepEval evaluation framework
+│   ├── instrumentation/            # Langfuse observability
+│   ├── prompts/                    # Prompt building system
+│   ├── session/                    # Session lifecycle, timing, checkpoints
+│   └── transcripts/                # Transcript management
+└── utils/                           # Utilities
+```
+
+Agents are registered via a **factory/registry pattern** - new agents can be added by implementing `BaseAgent` and registering in `main.py`. Reusable behaviors (session timing, graceful shutdown) are provided as mixins.
+
+## Tech Stack
+
+- **LiveKit Agents** v1.3.6 - Real-time voice agent framework
+- **LLM/STT/TTS** - OpenAI, Google Gemini, Cartesia, Deepgram, Sarvam, Inworld
+- **VAD** - Silero voice activity detection
+- **Observability** - Langfuse + OpenTelemetry
+- **Evaluation** - DeepEval
+- **Noise Cancellation** - LiveKit Cloud
 
 ## Dev Setup
 
-Clone the repository and install dependencies to a virtual environment:
+**Prerequisites:** Python 3.10+, [uv](https://docs.astral.sh/uv/)
 
-```console
-cd agent-starter-python
+```bash
+# Install dependencies
 uv sync
+
+# Copy environment config
+cp .env.example .env.local
 ```
 
-Sign up for [LiveKit Cloud](https://cloud.livekit.io/) then set up the environment by copying `.env.example` to `.env.local` and filling in the required keys:
+Fill in `.env.local`:
 
-- `LIVEKIT_URL`
-- `LIVEKIT_API_KEY`
-- `LIVEKIT_API_SECRET`
+```bash
+LIVEKIT_URL=
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
+OPENAI_API_KEY=
 
-You can load the LiveKit environment automatically using the [LiveKit CLI](https://docs.livekit.io/home/cli/cli-setup):
+# Optional - Simli Avatar for Interview Agent
+SIMLI_API_KEY=
+SIMLI_FACE_ID=
+```
+
+Or load LiveKit config via CLI:
 
 ```bash
 lk cloud auth
 lk app env -w -d .env.local
 ```
 
-## Run the agent
+## Running
 
-Before your first run, you must download certain models such as [Silero VAD](https://docs.livekit.io/agents/build/turns/vad/) and the [LiveKit turn detector](https://docs.livekit.io/agents/build/turns/turn-detector/):
-
-```console
+```bash
+# Download required models (VAD, turn detector) - first run only
 uv run python src/main.py download-files
-```
 
-Next, run this command to speak to your agent directly in your terminal:
-
-```console
+# Console mode (talk in terminal)
 uv run python src/main.py console
-```
 
-To run the agent for use with a frontend or telephony, use the `dev` command:
-
-```console
+# Dev mode (with frontend)
 uv run python src/main.py dev
-```
 
-In production, use the `start` command:
-
-```console
+# Production
 uv run python src/main.py start
 ```
 
-## Frontend & Telephony
+## Agent Routing
 
-Get started quickly with our pre-built frontend starter apps, or add telephony support:
+The frontend selects an agent via room metadata:
 
-| Platform | Link | Description |
-|----------|----------|-------------|
-| **Web** | [`livekit-examples/agent-starter-react`](https://github.com/livekit-examples/agent-starter-react) | Web voice AI assistant with React & Next.js |
-| **iOS/macOS** | [`livekit-examples/agent-starter-swift`](https://github.com/livekit-examples/agent-starter-swift) | Native iOS, macOS, and visionOS voice AI assistant |
-| **Flutter** | [`livekit-examples/agent-starter-flutter`](https://github.com/livekit-examples/agent-starter-flutter) | Cross-platform voice AI assistant app |
-| **React Native** | [`livekit-examples/voice-assistant-react-native`](https://github.com/livekit-examples/voice-assistant-react-native) | Native mobile app with React Native & Expo |
-| **Android** | [`livekit-examples/agent-starter-android`](https://github.com/livekit-examples/agent-starter-android) | Native Android app with Kotlin & Jetpack Compose |
-| **Web Embed** | [`livekit-examples/agent-starter-embed`](https://github.com/livekit-examples/agent-starter-embed) | Voice AI widget for any website |
-| **Telephony** | [📚 Documentation](https://docs.livekit.io/agents/start/telephony/) | Add inbound or outbound calling to your agent |
+```json
+{
+  "agent_type": "english_tutor",
+  "tutor_context": {
+    "proficiency_level": "intermediate",
+    "topics": ["technology", "travel"]
+  }
+}
+```
 
-For advanced customization, see the [complete frontend guide](https://docs.livekit.io/agents/start/frontend/).
+Supported `agent_type` values: `english_tutor`, `speak_with_ai`, `interview_agent`, `interview_preparer`
 
-## Tests and evals
+## Tests
 
-This project includes a complete suite of evals, based on the LiveKit Agents [testing & evaluation framework](https://docs.livekit.io/agents/build/testing/). To run them, use `pytest`.
-
-```console
+```bash
 uv run pytest
 ```
 
-## Using this template repo for your own project
+## Deployment
 
-Once you've started your own project based on this repo, you should:
+A `Dockerfile` is included for production deployment. See the [LiveKit deployment guide](https://docs.livekit.io/agents/ops/deployment/) for details.
 
-1. **Check in your `uv.lock`**: This file is currently untracked for the template, but you should commit it to your repository for reproducible builds and proper configuration management. (The same applies to `livekit.toml`, if you run your agents in LiveKit Cloud)
+## Frontend
 
-2. **Remove the git tracking test**: Delete the "Check files not tracked in git" step from `.github/workflows/tests.yml` since you'll now want this file to be tracked. These are just there for development purposes in the template repo itself.
-
-3. **Add your own repository secrets**: You must [add secrets](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/using-secrets-in-github-actions) for `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` so that the tests can run in CI.
-
-## Deploying to production
-
-This project is production-ready and includes a working `Dockerfile`. To deploy it to LiveKit Cloud or another environment, see the [deploying to production](https://docs.livekit.io/agents/ops/deployment/) guide.
-
-## Self-hosted LiveKit
-
-You can also self-host LiveKit instead of using LiveKit Cloud. See the [self-hosting](https://docs.livekit.io/home/self-hosting/) guide for more information. If you choose to self-host, you'll need to also use [model plugins](https://docs.livekit.io/agents/models/#plugins) instead of LiveKit Inference and will need to remove the [LiveKit Cloud noise cancellation](https://docs.livekit.io/home/cloud/noise-cancellation/) plugin.
+Compatible with any [LiveKit frontend](https://docs.livekit.io/agents/start/frontend/) or [SIP telephony](https://docs.livekit.io/agents/start/telephony/).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT - see [LICENSE](LICENSE) for details.

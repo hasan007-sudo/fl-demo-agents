@@ -97,7 +97,7 @@ async def entrypoint(ctx: JobContext):
         await create_interview_agent_session(ctx, context)
 
     else:
-        # Interview preparer
+        # Interview preparer => older agent
         context = InterviewContext.from_metadata(metadata)
         setup_langfuse_for_session(ctx, context)
 
@@ -149,5 +149,5 @@ if __name__ == "__main__":
         prewarm_fnc=prewarm,
         shutdown_process_timeout=100,
         num_idle_processes=3,
-        # agent_name="monologue-v2-agent",
+        # agent_name="monologue-v2-agent-dev",
     ))

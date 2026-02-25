@@ -45,41 +45,41 @@ PRACTICE_TIMING_CONFIG = SessionTimingConfig(
 
 # Mock interview: 10 minutes total
 MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
-    max_duration=600,  # 10 minutes
+    max_duration=300,  # 10 minutes
     checkpoints=[
         Checkpoint(
-            time=300,  # 5 minutes
-            frontend_event=True,
-            ai_instruction=(
-                "You are halfway through the interview (5 minutes elapsed). "
-                "Ensure you're making good progress through the key questions."
-            ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=480,  # 8 minutes
-            frontend_event=True,
-            ai_instruction=(
-                "Only 2 minutes remaining. Begin wrapping up the current topic "
-                "and prepare to conclude the interview professionally."
-            ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=540,  # 9 minutes
+            time=280,
             frontend_event=True,
             ai_instruction=(
                 "1 minute remaining. Conclude your current question and "
                 "prepare your closing remarks."
             ),
-            is_final=False
-        ),
-        Checkpoint(
-            time=600,  # 10 minutes - session end
-            frontend_event=True,
-            ai_instruction=None,
             is_final=True
         ),
+        # Checkpoint(
+        #     time=480,  # 8 minutes
+        #     frontend_event=True,
+        #     ai_instruction=(
+        #         "Only 2 minutes remaining. Begin wrapping up the current topic "
+        #         "and prepare to conclude the interview professionally."
+        #     ),
+        #     is_final=False
+        # ),
+        # Checkpoint(
+        #     time=540,  # 9 minutes
+        #     frontend_event=True,
+        #     ai_instruction=(
+        #         "1 minute remaining. Conclude your current question and "
+        #         "prepare your closing remarks."
+        #     ),
+        #     is_final=False
+        # ),
+        # Checkpoint(
+        #     time=600,  # 10 minutes - session end
+        #     frontend_event=True,
+        #     ai_instruction=None,
+        #     is_final=True
+        # ),
     ]
 )
 
@@ -123,7 +123,7 @@ def get_model_config(
         Dictionary of model configuration
     """
     config: Dict[str, Any] = {
-        "llm": openai.LLM(model="gpt-4o-mini"),
+        "llm": openai.LLM(model="gpt-4o", parallel_tool_calls=True),
         # "stt": sarvam.STT(
         #     language="en-IN",
         #     model="saarika:v2.5",

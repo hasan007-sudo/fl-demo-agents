@@ -37,11 +37,75 @@ class Question:
                 description="",
             )
         # Handle dictionary format
+        identifier = data.get("identifier") or data.get("id")
+        if not isinstance(identifier, str):
+            identifier = ""
+        identifier = identifier.strip()
+        if not identifier:
+            identifier = data.get("text", "")[:20].replace(" ", "_").lower()
+
         return cls(
             text=data.get("text", ""),
             hint=data.get("hint", ""),
-            identifier=data.get("identifier", ""),
+            identifier=identifier,
             description=data.get("description", ""),
+        )
+
+
+@dataclass
+class ResumeTranscriptTurn:
+    """Represents a finalized transcript turn restored during session resume."""
+
+    role: str
+    text: str
+    turn_id: str = ""
+    question_id: Optional[str] = None
+    timestamp: Optional[str] = None
+    is_final: bool = True
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Any,
+        valid_question_ids: set[str],
+    ) -> Optional["ResumeTranscriptTurn"]:
+        """Parse a resume transcript turn from metadata payload."""
+        if not isinstance(data, dict):
+            return None
+
+        role = data.get("role")
+        text = data.get("text")
+        is_final = data.get("is_final", data.get("isFinal", False))
+
+        if role not in {"user", "assistant"}:
+            return None
+        if not isinstance(text, str) or not text.strip():
+            return None
+        if not bool(is_final):
+            return None
+
+        question_id = data.get("question_id", data.get("questionId"))
+        if question_id is not None:
+            if not isinstance(question_id, str):
+                return None
+            if question_id not in valid_question_ids:
+                return None
+
+        turn_id = data.get("turn_id", data.get("turnId", ""))
+        if not isinstance(turn_id, str):
+            turn_id = ""
+
+        timestamp = data.get("timestamp")
+        if not isinstance(timestamp, str):
+            timestamp = None
+
+        return cls(
+            role=role,
+            text=text.strip(),
+            turn_id=turn_id,
+            question_id=question_id,
+            timestamp=timestamp,
+            is_final=True,
         )
 
 
@@ -71,6 +135,9 @@ class InterviewAgentContext(BaseContext):
     questions_discussed: List[str] = field(default_factory=list)
     current_question_id: Optional[str] = None
     topics_discussed: List[str] = field(default_factory=list)
+    is_resumed: bool = False
+    resume_transcript_turns: List[ResumeTranscriptTurn] = field(default_factory=list)
+    resume_rejected_reason: Optional[str] = None
 
     # Job context
     job_ctx: Optional[Any] = None
@@ -89,6 +156,10 @@ class InterviewAgentContext(BaseContext):
         super().validate()
         if self.questions is None:
             self.questions = []
+        if self.questions_discussed is None:
+            self.questions_discussed = []
+        if self.resume_transcript_turns is None:
+            self.resume_transcript_turns = []
 
     def get_question_by_id(self, identifier: str) -> Optional[Question]:
         """Get a question by its identifier."""
@@ -215,6 +286,75 @@ class InterviewAgentContext(BaseContext):
         nested_context = context_data.get("context", {})
         raw_questions = nested_context.get("questions", [])
         questions = [Question.from_dict(q) for q in raw_questions]
+        valid_question_ids = {q.identifier for q in questions if q.identifier}
+
+        resume_state_raw = nested_context.get("resume_state", nested_context.get("resumeState"))
+        resume_state_provided = resume_state_raw is not None
+        resume_state = resume_state_raw if isinstance(resume_state_raw, dict) else {}
+        had_schema_issues = resume_state_provided and not isinstance(resume_state_raw, dict)
+        had_question_mismatch = False
+
+        raw_discussed = resume_state.get("questions_discussed", resume_state.get("questionsDiscussed", []))
+        questions_discussed: List[str] = []
+        if isinstance(raw_discussed, list):
+            for identifier in raw_discussed:
+                if not isinstance(identifier, str):
+                    had_schema_issues = True
+                    continue
+                if identifier not in valid_question_ids:
+                    had_question_mismatch = True
+                    continue
+                if identifier in questions_discussed:
+                    continue
+                questions_discussed.append(identifier)
+        elif raw_discussed is not None:
+            had_schema_issues = True
+
+        current_question_id = resume_state.get("current_question_id", resume_state.get("currentQuestionId"))
+        if not isinstance(current_question_id, str):
+            if current_question_id is not None:
+                had_schema_issues = True
+            current_question_id = None
+        if current_question_id and current_question_id not in valid_question_ids:
+            had_question_mismatch = True
+            current_question_id = None
+        if current_question_id and current_question_id in questions_discussed:
+            current_question_id = None
+
+        raw_turns = resume_state.get("transcript_turns", resume_state.get("transcriptTurns", []))
+        resume_transcript_turns: List[ResumeTranscriptTurn] = []
+        if isinstance(raw_turns, list):
+            for raw_turn in raw_turns:
+                if not isinstance(raw_turn, dict):
+                    had_schema_issues = True
+                    continue
+                raw_question_id = raw_turn.get("question_id", raw_turn.get("questionId"))
+                if raw_question_id is not None and not isinstance(raw_question_id, str):
+                    had_schema_issues = True
+                    continue
+                if isinstance(raw_question_id, str) and raw_question_id not in valid_question_ids:
+                    had_question_mismatch = True
+                    continue
+                parsed_turn = ResumeTranscriptTurn.from_dict(
+                    data=raw_turn,
+                    valid_question_ids=valid_question_ids,
+                )
+                if parsed_turn:
+                    resume_transcript_turns.append(parsed_turn)
+                else:
+                    had_schema_issues = True
+        elif raw_turns is not None:
+            had_schema_issues = True
+
+        is_resumed = bool(
+            questions_discussed or current_question_id or resume_transcript_turns
+        )
+        resume_rejected_reason: Optional[str] = None
+        if resume_state_provided and not is_resumed:
+            if had_schema_issues:
+                resume_rejected_reason = "invalid_schema"
+            elif had_question_mismatch:
+                resume_rejected_reason = "question_mismatch"
 
         # Parse is_feedback_enabled (default True, supports both snake_case and camelCase)
         is_feedback_enabled = nested_context.get("is_feedback_enabled")
@@ -230,5 +370,10 @@ class InterviewAgentContext(BaseContext):
             mode=cls._parse_mode(nested_context),
             comfortable_language=nested_context.get("comfortable_language") or nested_context.get("comfortableLanguage"),
             questions=questions,
+            questions_discussed=questions_discussed,
+            current_question_id=current_question_id,
+            is_resumed=is_resumed,
+            resume_transcript_turns=resume_transcript_turns,
+            resume_rejected_reason=resume_rejected_reason,
             is_feedback_enabled=is_feedback_enabled,
         )

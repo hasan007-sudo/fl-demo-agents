@@ -94,15 +94,81 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
 
     def _get_default_instructions(self) -> str:
         """Get default instructions when no context is available."""
-        return "You are a professional interviewer. Conduct the interview professionally."
+        return (
+            "You are a professional interviewer. Conduct the interview professionally."
+        )
+
+    def _select_start_question_id(self) -> Optional[str]:
+        """Select the first question to ask, accounting for resume state."""
+        if not self._context:
+            return None
+
+        current_id = self._context.current_question_id
+        if (
+            current_id
+            and self._context.get_question_by_id(current_id)
+            and current_id not in self._context.questions_discussed
+        ):
+            return current_id
+
+        remaining = self._context.get_undiscussed_questions()
+        if not remaining:
+            return None
+
+        return remaining[0].identifier
+
+    async def _restore_resume_chat_context(self) -> int:
+        """
+        Restore prior finalized turns into model chat context for resumed sessions.
+
+        Returns:
+            Number of transcript turns restored.
+        """
+        if not self._context or not self._context.is_resumed:
+            return 0
+
+        turns_to_restore = self._context.resume_transcript_turns
+        if not turns_to_restore:
+            return 0
+
+        try:
+            chat_ctx = self.chat_ctx.copy()
+            chat_ctx.add_message(
+                role="system",
+                content=(
+                    "This is a resumed interview session. Continue naturally from prior "
+                    "conversation context and do not restart completed questions."
+                ),
+            )
+            for turn in turns_to_restore:
+                chat_ctx.add_message(role=turn.role, content=turn.text)
+
+            await self.update_chat_ctx(chat_ctx)
+            logger.info(
+                f"Restored {len(turns_to_restore)} transcript turns for resumed session"
+            )
+            return len(turns_to_restore)
+        except Exception as e:
+            logger.warning(f"Failed to restore resume transcript turns: {e}")
+            return 0
 
     async def on_enter(self) -> None:
         """Called when agent becomes active in the session."""
-        logger.info("InterviewAgent: Starting interview session")
+        restored_turn_count = 0
+
+        logger.info(
+            f"[DEBUG] on_enter - context: {self._context is not None}, questions: {len(self._context.questions) if self._context and self._context.questions else 0}"
+        )
+        if self._context:
+            logger.info(
+                f"[DEBUG] is_resumed={self._context.is_resumed}, current_question_id={self._context.current_question_id}, questions_discussed={self._context.questions_discussed}"
+            )
 
         if self._context:
             if self._context.student_name:
-                logger.info(f"Starting interview with candidate: {self._context.student_name}")
+                logger.info(
+                    f"Starting interview with candidate: {self._context.student_name}"
+                )
 
             if self._context.questions:
                 logger.info(f"Available questions: {len(self._context.questions)}")
@@ -116,18 +182,49 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     metadata={
                         "questions": self._context.get_questions_for_frontend(),
                         "total_count": len(self._context.questions),
-                    }
+                    },
                 )
 
-            logger.info(f"Interview mode: {self._context.mode.value}, Duration: {self._timing_config.max_duration}s")
+            logger.info(
+                f"Interview mode: {self._context.mode.value}, Duration: {self._timing_config.max_duration}s"
+            )
+            restored_turn_count = await self._restore_resume_chat_context()
+
+            if self._context.resume_rejected_reason:
+                await self._publish_session_event(
+                    event_type="resume_state_rejected",
+                    status="warning",
+                    reason=self._context.resume_rejected_reason,
+                    metadata={
+                        "is_resumed": self._context.is_resumed,
+                        "current_question_id": self._context.current_question_id,
+                        "questions_discussed": self._context.questions_discussed,
+                        "restored_turn_count": restored_turn_count,
+                    },
+                )
+
+            await self._publish_session_event(
+                event_type="resume_state_applied",
+                status="ready",
+                metadata={
+                    "is_resumed": self._context.is_resumed,
+                    "current_question_id": self._context.current_question_id,
+                    "questions_discussed": self._context.questions_discussed,
+                    "remaining_count": len(self._context.get_undiscussed_questions()),
+                    "restored_turn_count": restored_turn_count,
+                },
+            )
 
         # Initialize timing (starts checkpoint monitoring)
         self._init_timing()
 
-        # Get first question identifier for initial prompt
-        first_question_id = None
-        if self._context and self._context.questions:
-            first_question_id = self._context.questions[0].identifier
+        # Select next question identifier, accounting for resumed state.
+        first_question_id = self._select_start_question_id()
+
+        if self._context and self._context.questions and first_question_id is None:
+            logger.info("No remaining questions to ask. Ending session.")
+            await self._graceful_shutdown()
+            return
 
         # Different greeting based on mode
         duration_mins = self._timing_config.max_duration // 60

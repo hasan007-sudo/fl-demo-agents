@@ -123,7 +123,7 @@ def get_model_config(
         Dictionary of model configuration
     """
     config: Dict[str, Any] = {
-        "llm": openai.LLM(model="gpt-4o", parallel_tool_calls=True),
+        "llm": openai.LLM(model="gpt-4o-mini", parallel_tool_calls=True),
         # "stt": sarvam.STT(
         #     language="en-IN",
         #     model="saarika:v2.5",

@@ -43,9 +43,9 @@ PRACTICE_TIMING_CONFIG = SessionTimingConfig(
     ]
 )
 
-# Mock interview: 10 minutes total
+# Mock interview: 5 minutes total
 MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
-    max_duration=300,  # 10 minutes
+    max_duration=300,  # 5 minutes
     checkpoints=[
         Checkpoint(
             time=280,
@@ -123,12 +123,14 @@ def get_model_config(
         Dictionary of model configuration
     """
     config: Dict[str, Any] = {
-        "llm": openai.LLM(model="gpt-4o-mini", parallel_tool_calls=True),
+        # "llm": openai.LLM(model="gpt-4.1-mini", parallel_tool_calls=True),
+        # "llm": "google/gemini-2.5-flash-lite",
         # "stt": sarvam.STT(
         #     language="en-IN",
         #     model="saarika:v2.5",
         #     high_vad_sensitivity=True,  # Faster silence detection (0.5s vs 1s)
         # ),
+        "llm": openai.LLM.with_openrouter(model="openai/gpt-4o-mini"),
         "stt": deepgram.STTv2(
             model="flux-general-en",
             eager_eot_threshold=0.4,

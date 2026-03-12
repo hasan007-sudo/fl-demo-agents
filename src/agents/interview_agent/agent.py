@@ -1,7 +1,6 @@
 """Interview Agent for conducting interviews."""
 
 import logging
-import time
 from typing import Optional
 
 from livekit.agents import AgentSession
@@ -94,13 +93,11 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
 
     def _get_default_instructions(self) -> str:
         """Get default instructions when no context is available."""
-        return (
-            "You are a professional interviewer. Conduct the interview professionally."
-        )
+        return "You are a professional interviewer. Conduct the interview professionally."
 
     def _select_start_question_id(self) -> Optional[str]:
         """Select the first question to ask, accounting for resume state."""
-        if not self._context:
+        if not self._context or not self._context.questions:
             return None
 
         current_id = self._context.current_question_id
@@ -112,63 +109,15 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             return current_id
 
         remaining = self._context.get_undiscussed_questions()
-        if not remaining:
-            return None
-
-        return remaining[0].identifier
-
-    async def _restore_resume_chat_context(self) -> int:
-        """
-        Restore prior finalized turns into model chat context for resumed sessions.
-
-        Returns:
-            Number of transcript turns restored.
-        """
-        if not self._context or not self._context.is_resumed:
-            return 0
-
-        turns_to_restore = self._context.resume_transcript_turns
-        if not turns_to_restore:
-            return 0
-
-        try:
-            chat_ctx = self.chat_ctx.copy()
-            chat_ctx.add_message(
-                role="system",
-                content=(
-                    "This is a resumed interview session. Continue naturally from prior "
-                    "conversation context and do not restart completed questions."
-                ),
-            )
-            for turn in turns_to_restore:
-                chat_ctx.add_message(role=turn.role, content=turn.text)
-
-            await self.update_chat_ctx(chat_ctx)
-            logger.info(
-                f"Restored {len(turns_to_restore)} transcript turns for resumed session"
-            )
-            return len(turns_to_restore)
-        except Exception as e:
-            logger.warning(f"Failed to restore resume transcript turns: {e}")
-            return 0
+        return remaining[0].identifier if remaining else None
 
     async def on_enter(self) -> None:
         """Called when agent becomes active in the session."""
-        restored_turn_count = 0
-
-        logger.info(
-            f"[DEBUG] on_enter - context: {self._context is not None}, questions: {len(self._context.questions) if self._context and self._context.questions else 0}"
-        )
-        if self._context:
-            logger.info(
-                f"[DEBUG] is_resumed={self._context.is_resumed}, current_question_id={self._context.current_question_id}, questions_discussed={self._context.questions_discussed}"
-            )
+        logger.info("InterviewAgent: Starting interview session")
 
         if self._context:
             if self._context.student_name:
-                logger.info(
-                    f"Starting interview with candidate: {self._context.student_name}"
-                )
+                logger.info(f"Starting interview with candidate: {self._context.student_name}")
 
             if self._context.questions:
                 logger.info(f"Available questions: {len(self._context.questions)}")
@@ -182,55 +131,78 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
                     metadata={
                         "questions": self._context.get_questions_for_frontend(),
                         "total_count": len(self._context.questions),
-                    },
+                    }
                 )
 
-            logger.info(
-                f"Interview mode: {self._context.mode.value}, Duration: {self._timing_config.max_duration}s"
-            )
-            restored_turn_count = await self._restore_resume_chat_context()
+            logger.info(f"Interview mode: {self._context.mode.value}, Duration: {self._timing_config.max_duration}s")
 
-            if self._context.resume_rejected_reason:
-                await self._publish_session_event(
-                    event_type="resume_state_rejected",
-                    status="warning",
-                    reason=self._context.resume_rejected_reason,
-                    metadata={
-                        "is_resumed": self._context.is_resumed,
-                        "current_question_id": self._context.current_question_id,
-                        "questions_discussed": self._context.questions_discussed,
-                        "restored_turn_count": restored_turn_count,
-                    },
-                )
+            # Handle resume: inject conversation summary into chat context
+            if self._context.is_resumed and self._context.conversation_summary:
+                try:
+                    chat_ctx = self.chat_ctx.copy()
+                    chat_ctx.add_message(
+                        role="system",
+                        content=(
+                            "This is a resumed session. The candidate has already discussed "
+                            "some questions. Here is a summary of the prior conversation:\n\n"
+                            f"{self._context.conversation_summary}\n\n"
+                            "Continue naturally from where the conversation left off. "
+                            "Do NOT re-ask questions marked as [DISCUSSED]."
+                        ),
+                    )
+                    await self.update_chat_ctx(chat_ctx)
+                    logger.info("Injected conversation summary for resumed session")
+                except Exception as e:
+                    logger.warning(f"Failed to inject conversation summary: {e}")
 
-            await self._publish_session_event(
-                event_type="resume_state_applied",
-                status="ready",
-                metadata={
-                    "is_resumed": self._context.is_resumed,
-                    "current_question_id": self._context.current_question_id,
-                    "questions_discussed": self._context.questions_discussed,
-                    "remaining_count": len(self._context.get_undiscussed_questions()),
-                    "restored_turn_count": restored_turn_count,
-                },
-            )
+            # Publish resume state events to frontend
+            if self._context.is_resumed:
+                if self._context.resume_rejected_reason:
+                    await self._publish_session_event(
+                        event_type="resume_state_rejected",
+                        status="warning",
+                        reason=self._context.resume_rejected_reason,
+                    )
+                else:
+                    await self._publish_session_event(
+                        event_type="resume_state_applied",
+                        status="ready",
+                        metadata={
+                            "is_resumed": True,
+                            "current_question_id": self._context.current_question_id,
+                            "questions_discussed": self._context.questions_discussed,
+                            "remaining_count": len(self._context.get_undiscussed_questions()),
+                        },
+                    )
 
         # Initialize timing (starts checkpoint monitoring)
         self._init_timing()
 
-        # Select next question identifier, accounting for resumed state.
+        # Select next question, accounting for resume state
         first_question_id = self._select_start_question_id()
 
+        # If all questions are done, end session
         if self._context and self._context.questions and first_question_id is None:
             logger.info("No remaining questions to ask. Ending session.")
             await self._graceful_shutdown()
             return
 
-        # Different greeting based on mode
+        # Different greeting based on mode and resume state
         duration_mins = self._timing_config.max_duration // 60
         mode = self._context.mode if self._context else InterviewMode.PRACTICE
+        is_resumed = self._context.is_resumed if self._context else False
 
-        if mode == InterviewMode.MOCK:
+        if is_resumed and first_question_id:
+            # Resume path: brief welcome back + next question
+            instructions = (
+                f"Welcome the candidate back briefly. This is a resumed session. "
+                f"Do NOT re-introduce yourself or repeat the session overview. "
+                f"Call start_question(\"{first_question_id}\") and continue the interview "
+                f"from that question."
+            )
+            await self.session.generate_reply(instructions=instructions)
+
+        elif mode == InterviewMode.MOCK:
             instructions = (
                 f"Greet the candidate professionally and introduce yourself as the interviewer. "
                 f"This is a {duration_mins}-minute mock interview session. "
@@ -243,7 +215,6 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
             await self.session.generate_reply(instructions=instructions)
 
         elif mode == InterviewMode.DIAGNOSTIC:
-            # Diagnostic mode: No greeting, jump straight to the question
             if first_question_id:
                 await self.session.generate_reply(
                     instructions=(
@@ -372,80 +343,6 @@ class InterviewAgent(TimingMixin, ShutdownMixin, BaseAgent[InterviewAgentContext
         else:
             logger.info(f"Question already discussed or not found: {identifier}")
         return result
-
-    # @function_tool()
-    # async def record_topic_discussed(
-    #     self,
-    #     context: RunContext[InterviewAgentContext],
-    #     topic: str
-    # ) -> bool:
-    #     """
-    #     Record a general topic that was discussed during the interview.
-
-    #     Use this when the conversation explores a topic beyond the provided
-    #     questions, to help track what was covered.
-
-    #     Args:
-    #         topic: Brief description of the topic (e.g., "career goals",
-    #                "technical skills", "work experience")
-
-    #     Returns:
-    #         True if topic was recorded successfully
-    #     """
-    #     context.userdata.add_topic(topic)
-    #     logger.info(f"Topic recorded: {topic}")
-    #     return True
-
-    @function_tool()
-    async def get_remaining_questions(
-        self,
-        context: RunContext[InterviewAgentContext]
-    ) -> str:
-        """
-        Get a list of questions that haven't been discussed yet.
-
-        Use this to check which questions are still available to explore
-        when looking for conversation direction.
-
-        Returns:
-            Summary of remaining undiscussed questions
-        """
-        remaining = context.userdata.get_undiscussed_questions()
-        if not remaining:
-            return "All questions have been discussed."
-
-        lines = []
-        for q in remaining:
-            lines.append(f"- {q.text} (Hint: {q.hint})")
-
-        return f"Remaining questions ({len(remaining)}):\n" + "\n".join(lines)
-
-    @function_tool()
-    async def get_time_remaining(
-        self,
-        context: RunContext[InterviewAgentContext]
-    ) -> str:
-        """
-        Check how much time is remaining in the interview session.
-
-        Use this to be aware of time constraints and pace the interview
-        appropriately.
-
-        Returns:
-            String describing remaining time
-        """
-        total = self._timing_config.max_duration
-        elapsed = int(self._timer.elapsed_time()) if self._timer else 0
-        remaining = max(0, total - elapsed)
-
-        if remaining <= 0:
-            return "Time has expired. Please conclude the interview."
-        elif remaining <= 60:
-            return f"Less than 1 minute remaining ({remaining}s). Wrap up now."
-        elif remaining <= 120:
-            return f"About {remaining // 60} minute(s) remaining. Begin wrapping up."
-        else:
-            return f"{remaining // 60} minutes remaining ({elapsed}s elapsed of {total}s total)."
 
     @function_tool()
     async def end_session(

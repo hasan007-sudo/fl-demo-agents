@@ -19,8 +19,8 @@
 
 **TOOLS:**
 
+- `start_question(identifier)` - MUST call before asking each question.
 - `record_question_discussed(identifier)` - Call with the question ID when you've explored a question.
-- `record_topic_discussed(topic)` - Track specific topics discussed within the questions.
-- `get_remaining_questions()` - Check what questions haven't been discussed yet.
+- `end_session()` - Call when all questions are done or candidate wants to end.
 
 {{ prompt }}

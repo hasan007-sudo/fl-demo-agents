@@ -6,10 +6,10 @@ from livekit import rtc
 from livekit.agents import (
     JobContext,
     AgentSession,
-    RoomInputOptions,
     RoomIO,
     MetricsCollectedEvent,
     metrics,
+    room_io,
 )
 from livekit.plugins import noise_cancellation
 from livekit.plugins import simli
@@ -35,16 +35,20 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
     # Get model config - diagnostic mode skips VAD for push-to-talk
     model_config = get_model_config(mode=context.mode)
 
-    # Prewarm TTS connection for diagnostic mode (push-to-talk)
-    # This prevents WebSocket timeout issues when TTS isn't used immediately
-    if context.mode == InterviewMode.DIAGNOSTIC and "tts" in model_config:
+    # Prewarm TTS connection to avoid cold-start latency on first response
+    if "tts" in model_config:
         model_config["tts"].prewarm()
-        logger.info("TTS connection prewarmed for diagnostic mode")
+        logger.info("TTS connection prewarmed")
+    from livekit.agents import inference
+    from livekit.plugins import groq
 
     agent = InterviewAgent(
         context=context,
         prompt_builder=prompt_builder,
         **model_config,
+        #  llm=groq.LLM(
+        #     model="llama-3.3-70b-versatile"
+        # ),
     )
 
     context.job_ctx = ctx
@@ -59,15 +63,18 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
         "userdata": context,
         "resume_false_interruption": True,
         "min_interruption_duration": 0.5,
+        "min_endpointing_delay": 0.3,
+        "max_endpointing_delay": 2.0,
         "user_away_timeout": 30.0,
         "use_tts_aligned_transcript": True,
+        "preemptive_generation": True,
     }
 
     if is_diagnostic:
         session_kwargs["turn_detection"] = "manual"
         logger.info("Diagnostic mode: Using manual turn detection (push-to-talk)")
 
-    session = AgentSession[InterviewAgentContext](**session_kwargs)
+    session = AgentSession[InterviewAgentContext](**session_kwargs, max_tool_steps=3)
 
     # Add performance logging for diagnostic mode
     if is_diagnostic:
@@ -188,8 +195,16 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
     # For diagnostic mode (push-to-talk), use RoomIO instead of passing room to session.start()
     if is_diagnostic:
         # Set up RoomIO for push-to-talk - this handles room connection
-        room_io = RoomIO(session, room=ctx.room)
-        await room_io.start()
+        diagnostic_room_io = RoomIO(
+            session,
+            room=ctx.room,
+            options=room_io.RoomOptions(
+                audio_input=room_io.AudioInputOptions(
+                    noise_cancellation=noise_cancellation.BVC(),
+                ),
+            ),
+        )
+        await diagnostic_room_io.start()
         logger.info("RoomIO started for diagnostic push-to-talk mode")
 
         # Connect to room BEFORE session.start() so on_enter() can publish events
@@ -211,7 +226,7 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
             logger.info(f"start_turn RPC called by {data.caller_identity}")
             session.interrupt()
             session.clear_user_turn()
-            room_io.set_participant(data.caller_identity)
+            diagnostic_room_io.set_participant(data.caller_identity)
             session.input.set_audio_enabled(True)
             return "ok"
 
@@ -261,8 +276,10 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
         await session.start(
             agent=agent,
             room=ctx.room,
-            room_input_options=RoomInputOptions(
-                noise_cancellation=noise_cancellation.BVC(),
+            room_options=room_io.RoomOptions(
+                audio_input=room_io.AudioInputOptions(
+                    noise_cancellation=noise_cancellation.BVC(),
+                ),
             ),
         )
         await ctx.connect()

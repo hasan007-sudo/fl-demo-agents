@@ -65,7 +65,7 @@ async def create_session(ctx: JobContext, context: InterviewAgentContext):
         "min_interruption_duration": 0.5,
         "min_endpointing_delay": 0.3,
         "max_endpointing_delay": 2.0,
-        "user_away_timeout": 30.0,
+        "user_away_timeout": None,
         "use_tts_aligned_transcript": True,
         "preemptive_generation": True,
     }

@@ -269,6 +269,9 @@ class TestPromptRendering:
 
         assert len(prompt) > 0
         assert "DIAGNOSTIC" in prompt.upper() or "diagnostic" in prompt.lower()
+        assert "Never mention tools" in prompt
+        assert "PER-QUESTION FLOW (TEXT EXAMPLE)" in prompt
+        assert "┌" not in prompt
 
     def test_all_modes_produce_nonempty_output(self):
         builder = InterviewPromptBuilder()

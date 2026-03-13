@@ -100,8 +100,14 @@ def setup_langfuse_for_session(
         trace_prefix = "Unknown"
 
     # Build Langfuse metadata for session grouping and trace naming
-    user_identifier = user_email or user_name or ctx.room.name
-    session_identifier = "-".join(filter(None, [trace_prefix, user_email or None, user_name or None]))
+    room_name = getattr(getattr(ctx, "room", None), "name", None)
+    user_identifier = user_email or user_name or room_name
+    session_identifier = "-".join(filter(None, [
+        trace_prefix,
+        user_email or None,
+        user_name or None,
+        room_name or None,
+    ]))
 
     langfuse_metadata = {
         "langfuse.session.id": session_identifier,
@@ -126,5 +132,4 @@ def setup_langfuse_for_session(
         logger.info("Langfuse tracing configured successfully")
     else:
         logger.warning("Langfuse tracing not configured")
-
 

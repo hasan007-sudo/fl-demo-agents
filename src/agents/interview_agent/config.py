@@ -85,7 +85,7 @@ MOCK_INTERVIEW_TIMING_CONFIG = SessionTimingConfig(
 
 # Diagnostic mode: No checkpoints - session runs until manually ended
 DIAGNOSTIC_TIMING_CONFIG = SessionTimingConfig(
-    max_duration=300,  # 5 minutes (reference only, not enforced)
+    max_duration=900,  # 5 minutes (reference only, not enforced)
     checkpoints=[]
 )
 

@@ -7,6 +7,8 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from core.session.checkpoints import SessionTimingConfig, Checkpoint
 from .context import InterviewMode
 from livekit.plugins import inworld
+from livekit.plugins import elevenlabs
+from livekit.plugins.elevenlabs import VoiceSettings
 
 # =============================================================================
 # SESSION TIMING CONFIGURATIONS
@@ -141,6 +143,15 @@ def get_model_config(
             model="bulbul:v2",
             pace=0.9,
         ),
+        # "tts": elevenlabs.TTS(
+        #     voice_id="cgSgspJ2msm6clMCkdW9",
+        #     model="eleven_multilingual_v2",
+        #     voice_settings=VoiceSettings(
+        #         stability=0.6,
+        #         similarity_boost=0.6,
+        #         speed=0.7,
+        #     )
+        # ),
         # "tts": inworld.TTS(model="inworld-tts-1-max", voice="Ashley"),
     }
 

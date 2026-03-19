@@ -15,7 +15,7 @@ source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
     { name = "langfuse" },
-    { name = "livekit-agents", extra = ["cartesia", "deepgram", "google", "groq", "inworld", "liveavatar", "openai", "sarvam", "silero", "simli", "turn-detector"] },
+    { name = "livekit-agents", extra = ["cartesia", "deepgram", "elevenlabs", "google", "groq", "inworld", "liveavatar", "openai", "sarvam", "silero", "simli", "turn-detector"] },
     { name = "livekit-plugins-liveavatar" },
     { name = "livekit-plugins-noise-cancellation" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -34,7 +34,7 @@ dev = [
 requires-dist = [
     { name = "deepeval", specifier = ">=2.0.0" },
     { name = "langfuse", specifier = ">=2.0" },
-    { name = "livekit-agents", extras = ["cartesia", "deepgram", "google", "groq", "inworld", "liveavatar", "openai", "sarvam", "silero", "simli", "turn-detector"], specifier = "~=1.4" },
+    { name = "livekit-agents", extras = ["cartesia", "deepgram", "elevenlabs", "google", "groq", "inworld", "liveavatar", "openai", "sarvam", "silero", "simli", "turn-detector"], specifier = "~=1.4" },
     { name = "livekit-plugins-liveavatar", specifier = ">=1.3.9" },
     { name = "livekit-plugins-noise-cancellation", specifier = "~=0.2.5" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
@@ -1246,6 +1246,9 @@ codecs = [
 deepgram = [
     { name = "livekit-plugins-deepgram" },
 ]
+elevenlabs = [
+    { name = "livekit-plugins-elevenlabs" },
+]
 google = [
     { name = "livekit-plugins-google" },
 ]
@@ -1354,6 +1357,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bd/f7/5a468c3671885e54a04b0eeb021f552e2f8f64a4222c25462fd0be5eb6b8/livekit_plugins_deepgram-1.4.4.tar.gz", hash = "sha256:d4617442889b700e3a715060f9caeff66a6a398775650ac9e5e52f2e5fa181bb", size = 16872, upload-time = "2026-03-03T01:12:04.568Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/ef/7c0b6ec6d86cdef5eba38c59a24264e486a5378f23722a4882687cffe734/livekit_plugins_deepgram-1.4.4-py3-none-any.whl", hash = "sha256:f02488b0c749e018d5488681227e7612968343f1a5fbf00f009c2fc0ee7f2809", size = 21901, upload-time = "2026-03-03T01:12:03.053Z" },
+]
+
+[[package]]
+name = "livekit-plugins-elevenlabs"
+version = "1.4.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents", extra = ["codecs"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3f/63/d9193432ed8274dc4eb690027745032829b7154ba54718158d75832ddb13/livekit_plugins_elevenlabs-1.4.4.tar.gz", hash = "sha256:1e8f88010c3676d149a296397b3d186f9236ce6db5dab38a3f5ee86dd034bb5c", size = 17138, upload-time = "2026-03-03T01:12:06.328Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f0/ca/f34d77db12fbaddb42a6b4e9346a417f4b02e84c5fd631c6180552f4ba25/livekit_plugins_elevenlabs-1.4.4-py3-none-any.whl", hash = "sha256:37fce794366d140aef68b8d1e5b4b65f5eeec818d58f2c59c5d1194f6d02bfad", size = 19825, upload-time = "2026-03-03T01:12:05.304Z" },
 ]
 
 [[package]]
